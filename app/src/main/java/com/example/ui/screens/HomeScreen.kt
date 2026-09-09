@@ -76,9 +76,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import com.example.data.model.AnswerKeySetEntity
 import com.example.data.model.QuizEntity
 import com.example.ui.components.CreateQuizDialog
+import com.example.ui.theme.NavCoral
+import com.example.ui.theme.NavOrange
+import com.example.ui.theme.NavbarBackground
+import com.example.ui.theme.NavbarBorder
+import com.example.ui.theme.OutlineLight
 import com.example.ui.theme.PrimaryBlue
 import com.example.ui.theme.PrimaryContainer
 import com.example.ui.theme.SecondaryCyan
@@ -104,39 +111,57 @@ fun HomeScreen(
   var showCreateQuizDialog by remember { mutableStateOf(false) }
 
   Scaffold(
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
-      TopAppBar(
-        title = {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
-              contentAlignment = Alignment.Center
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(NavbarBackground)
+      ) {
+        TopAppBar(
+          title = {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              Icon(
-                imageVector = Icons.Default.CheckCircleOutline,
-                contentDescription = "OMR Logo",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(22.dp)
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clip(CircleShape)
+                  .background(
+                    Brush.linearGradient(
+                      listOf(NavCoral, MaterialTheme.colorScheme.primary)
+                    )
+                  ),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.CheckCircleOutline,
+                  contentDescription = "OMR Logo",
+                  tint = Color.White,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+              Text(
+                text = "NavGrade",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
               )
             }
-            Text(
-              text = "NavGrade",
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.Bold
-            )
-          }
-        },
-        actions = {},
-        colors = TopAppBarDefaults.topAppBarColors(
-          containerColor = MaterialTheme.colorScheme.surface
+          },
+          actions = {},
+          colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent
+          )
         )
-      )
+        // Border-bottom under navbar
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(NavbarBorder)
+        )
+      }
     },
     bottomBar = {
       NavigationBar(
@@ -544,6 +569,7 @@ fun QuizCard(
     colors = CardDefaults.cardColors(
       containerColor = MaterialTheme.colorScheme.surface
     ),
+    border = BorderStroke(1.dp, OutlineLight),
     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
   ) {
     Column(
@@ -575,7 +601,7 @@ fun QuizCard(
         Icon(
           imageVector = Icons.Default.CalendarMonth,
           contentDescription = "Date",
-          tint = SecondaryCyan,
+          tint = NavOrange,
           modifier = Modifier.size(16.dp)
         )
         Text(
@@ -626,6 +652,7 @@ fun AnswerKeyCard(
     colors = CardDefaults.cardColors(
       containerColor = MaterialTheme.colorScheme.surface
     ),
+    border = BorderStroke(1.dp, OutlineLight),
     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
   ) {
     Column(
