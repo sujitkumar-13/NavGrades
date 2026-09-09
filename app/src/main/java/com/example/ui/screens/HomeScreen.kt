@@ -126,7 +126,7 @@ fun HomeScreen(
               )
             }
             Text(
-              text = "Navgurukul OMR Checker",
+              text = "NavGrade",
               style = MaterialTheme.typography.titleLarge,
               fontWeight = FontWeight.Bold
             )
