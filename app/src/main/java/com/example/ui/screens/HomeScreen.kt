@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,9 +74,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.example.data.model.AnswerKeySetEntity
@@ -124,24 +127,11 @@ fun HomeScreen(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clip(CircleShape)
-                  .background(
-                    Brush.linearGradient(
-                      listOf(NavCoral, MaterialTheme.colorScheme.primary)
-                    )
-                  ),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.CheckCircleOutline,
-                  contentDescription = "OMR Logo",
-                  tint = Color.White,
-                  modifier = Modifier.size(22.dp)
-                )
-              }
+              Image(
+                painter = painterResource(id = R.drawable.ic_ng_logo),
+                contentDescription = "NavGrade Logo",
+                modifier = Modifier.size(30.dp, 20.dp)
+              )
               Text(
                 text = "NavGrade",
                 style = MaterialTheme.typography.titleLarge,
