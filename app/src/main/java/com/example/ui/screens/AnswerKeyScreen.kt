@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AnswerKeyItemEntity
 import com.example.ui.components.OptionBubble
+import com.example.ui.theme.OutlineLight
 import com.example.ui.viewmodel.OmrViewModel
 import java.util.UUID
 
@@ -320,30 +322,27 @@ fun AnswerKeyQuestionCard(
   onMarksChanged: (Float) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var marksText by remember(marks) { mutableStateOf(if (marks % 1f == 0f) marks.toInt().toString() else marks.toString()) }
-
   Card(
-    shape = RoundedCornerShape(14.dp),
+    shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(
       containerColor = MaterialTheme.colorScheme.surface
     ),
+    border = BorderStroke(1.dp, OutlineLight),
     elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
     modifier = modifier
       .fillMaxWidth()
       .testTag("question_key_card_$questionNumber")
   ) {
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 14.dp, vertical = 12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween
+        .padding(horizontal = 16.dp, vertical = 14.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-      // Question Label
+      // 1. Question Number Header
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.width(72.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         Box(
           modifier = Modifier
@@ -359,59 +358,81 @@ fun AnswerKeyQuestionCard(
             color = MaterialTheme.colorScheme.onPrimaryContainer
           )
         }
+        Text(
+          text = "Question $questionNumber",
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.onSurface
+        )
       }
 
-      // Bubbles A, B, C, D
+      // 2. Option Section
       Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
       ) {
-        listOf("A", "B", "C", "D").forEach { opt ->
-          OptionBubble(
-            text = opt,
-            isSelected = selectedOption == opt,
-            onClick = { onOptionSelected(opt) },
-            size = 38.dp,
-            modifier = Modifier.testTag("bubble_${questionNumber}_$opt")
-          )
+        Text(
+          text = "Option",
+          style = MaterialTheme.typography.bodyMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.width(60.dp)
+        )
+
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          listOf("A", "B", "C", "D").forEach { opt ->
+            OptionBubble(
+              text = opt,
+              isSelected = selectedOption == opt,
+              onClick = { onOptionSelected(opt) },
+              size = 38.dp,
+              modifier = Modifier.testTag("bubble_${questionNumber}_$opt")
+            )
+          }
         }
       }
 
-      // Marks Points Input
+      // 3. Marks Section
       Row(
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.SpaceBetween
       ) {
-        OutlinedTextField(
-          value = marksText,
-          onValueChange = {
-            if (it.all { char -> char.isDigit() || char == '.' } && it.length <= 3) {
-              marksText = it
-              it.toFloatOrNull()?.let { num -> onMarksChanged(num) }
-            }
-          },
-          singleLine = true,
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-          modifier = Modifier
-            .width(54.dp)
-            .height(48.dp)
-            .testTag("marks_input_$questionNumber"),
-          shape = RoundedCornerShape(8.dp),
-          colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-          ),
-          textStyle = androidx.compose.ui.text.TextStyle(
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-          )
-        )
         Text(
-          text = "pt",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
+          text = "Marks",
+          style = MaterialTheme.typography.bodyMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.width(60.dp)
         )
+
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          val markOptions = remember(marks) {
+            if (marks in listOf(1f, 2f, 3f, 4f)) {
+              listOf(1f, 2f, 3f, 4f)
+            } else {
+              (listOf(1f, 2f, 3f, 4f) + marks).distinct().sorted()
+            }
+          }
+          markOptions.forEach { mVal ->
+            val isSelected = marks == mVal
+            val mText = if (mVal % 1f == 0f) mVal.toInt().toString() else mVal.toString()
+            OptionBubble(
+              text = mText,
+              isSelected = isSelected,
+              onClick = { onMarksChanged(mVal) },
+              size = 38.dp,
+              modifier = Modifier.testTag("marks_bubble_${questionNumber}_$mText")
+            )
+          }
+        }
       }
     }
   }
