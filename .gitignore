@@ -52,3 +52,8 @@ captures/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Third-party tools / binaries
+scrcpy*
+*.tar.gz
+
