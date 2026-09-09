@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,7 +59,6 @@ fun CreateQuizDialog(
   val selectedKeyId by remember(answerKeys) {
     mutableStateOf(answerKeys.firstOrNull { it.numQuestions == 16 }?.id ?: answerKeys.firstOrNull()?.id)
   }
-  var quizDate by remember { mutableStateOf(defaultDate) }
   var defaultMarksText by remember { mutableStateOf("1") }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -135,25 +133,6 @@ fun CreateQuizDialog(
           shape = RoundedCornerShape(12.dp)
         )
 
-        // Date
-        OutlinedTextField(
-          value = quizDate,
-          onValueChange = { quizDate = it },
-          label = { Text("Date") },
-          leadingIcon = {
-            Icon(
-              imageVector = Icons.Default.CalendarToday,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary
-            )
-          },
-          singleLine = true,
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("quiz_date_input"),
-          shape = RoundedCornerShape(12.dp)
-        )
-
         // Default Marks Per Question
         OutlinedTextField(
           value = defaultMarksText,
@@ -195,7 +174,7 @@ fun CreateQuizDialog(
 
             viewModel.createQuiz(
               name = quizName.trim(),
-              date = quizDate.trim(),
+              date = defaultDate,
               numQuestions = qCount,
               answerKeyId = selectedKeyId,
               defaultMarks = marks,

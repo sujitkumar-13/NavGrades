@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FormatListNumbered
@@ -80,7 +79,6 @@ fun CreateQuizScreen(
   var selectedKeyId by remember(answerKeys) {
     mutableStateOf(answerKeys.firstOrNull { it.numQuestions == 16 }?.id ?: answerKeys.firstOrNull()?.id)
   }
-  var quizDate by remember { mutableStateOf(defaultDate) }
   var defaultMarksText by remember { mutableStateOf("1") }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -156,23 +154,7 @@ fun CreateQuizScreen(
             shape = RoundedCornerShape(12.dp)
           )
 
-          // Date
-          OutlinedTextField(
-            value = quizDate,
-            onValueChange = { quizDate = it },
-            label = { Text("Date") },
-            placeholder = { Text("21 August 2026") },
-            leadingIcon = {
-              Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            },
-            singleLine = true,
-            modifier = Modifier
-              .fillMaxWidth()
-              .testTag("quiz_date_input"),
-            shape = RoundedCornerShape(12.dp)
-          )
-
-          // Default Marks
+            // Default Marks
           OutlinedTextField(
             value = defaultMarksText,
             onValueChange = {
@@ -219,7 +201,7 @@ fun CreateQuizScreen(
 
           viewModel.createQuiz(
             name = trimmedName,
-            date = quizDate.trim().ifEmpty { defaultDate },
+            date = defaultDate,
             numQuestions = qCount,
             answerKeyId = selectedKeyId,
             templateType = "standard_${qCount}",
