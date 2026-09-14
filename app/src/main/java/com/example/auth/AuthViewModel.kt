@@ -39,7 +39,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     ApprovedUserRemote(
       id = "admin-1",
       email = "admin@navgurukul.org",
-      name = "NavGrade Admin",
+      name = "NavGrades Admin",
       role = "admin",
       approvedAt = "2026-09-01"
     ),

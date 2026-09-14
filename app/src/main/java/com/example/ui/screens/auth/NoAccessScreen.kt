@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Email
@@ -63,17 +66,20 @@ fun NoAccessScreen(
     Box(
       modifier = Modifier
         .fillMaxSize()
-        .padding(24.dp),
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 24.dp, vertical = 20.dp),
       contentAlignment = Alignment.Center
     ) {
       Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+          .widthIn(max = 480.dp)
+          .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        // NavGrade Logo
+        // NavGrades Logo
         Image(
           painter = painterResource(id = R.drawable.ic_ng_logo),
-          contentDescription = "NavGrade Logo",
+          contentDescription = "NavGrades Logo",
           modifier = Modifier.size(42.dp, 28.dp)
         )
 
@@ -121,7 +127,7 @@ fun NoAccessScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-              text = "You don't have access to NavGrade. Please coordinate with your team lead to get added.",
+              text = "You don't have access to NavGrades. Please coordinate with your team lead to get added.",
               style = MaterialTheme.typography.bodyMedium,
               color = TextSecondaryLight,
               textAlign = TextAlign.Center,

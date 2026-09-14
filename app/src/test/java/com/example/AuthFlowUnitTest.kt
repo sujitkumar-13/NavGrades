@@ -70,7 +70,7 @@ class AuthFlowUnitTest {
     val user = ApprovedUserRemote(
       id = "admin-1",
       email = "admin@navgurukul.org",
-      name = "NavGrade Admin",
+      name = "NavGrades Admin",
       role = "admin"
     )
     val state = AuthState.Authenticated(user)

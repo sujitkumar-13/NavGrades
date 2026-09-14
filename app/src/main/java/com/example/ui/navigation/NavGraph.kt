@@ -69,7 +69,7 @@ fun OmrNavGraph(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
               Image(
                 painter = painterResource(id = R.drawable.ic_ng_logo),
-                contentDescription = "NavGrade Logo",
+                contentDescription = "NavGrades Logo",
                 modifier = Modifier.size(54.dp, 36.dp)
               )
               Spacer(modifier = Modifier.height(16.dp))

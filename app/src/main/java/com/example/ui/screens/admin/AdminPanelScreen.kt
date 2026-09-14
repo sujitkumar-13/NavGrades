@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AdminPanelSettings
@@ -222,7 +225,10 @@ fun AdminPanelContent(
         Text("Add Team Member", fontWeight = FontWeight.Bold)
       },
       text = {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+          modifier = Modifier.verticalScroll(rememberScrollState()),
+          verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
           Text(
             "Add a Google email to the whitelist. This person will be able to log in immediately.",
             style = MaterialTheme.typography.bodySmall,
@@ -285,10 +291,14 @@ private fun TeamMembersList(
 ) {
   var userToRevoke by remember { mutableStateOf<ApprovedUserRemote?>(null) }
 
-  Column(modifier = Modifier.fillMaxSize()) {
+  Column(
+    modifier = Modifier.fillMaxSize(),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
     // Search Bar
     Surface(
       modifier = Modifier
+        .widthIn(max = 680.dp)
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 10.dp),
       color = SurfaceLight,
@@ -330,7 +340,10 @@ private fun TeamMembersList(
     }
 
     LazyColumn(
-      modifier = Modifier.fillMaxSize(),
+      modifier = Modifier
+        .widthIn(max = 680.dp)
+        .fillMaxWidth()
+        .weight(1f),
       contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {

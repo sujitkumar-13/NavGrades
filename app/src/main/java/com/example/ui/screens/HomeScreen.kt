@@ -78,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -148,13 +149,15 @@ fun HomeScreen(
             ) {
               Image(
                 painter = painterResource(id = R.drawable.ic_ng_logo),
-                contentDescription = "NavGrade Logo",
+                contentDescription = "NavGrades Logo",
                 modifier = Modifier.size(30.dp, 20.dp)
               )
               Text(
-                text = "NavGrade",
+                text = "NavGrades",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
               )
             }
           },
@@ -262,7 +265,11 @@ fun HomeScreen(
           label = {
             Text(
               text = "Quizzes (${quizzes.size})",
-              fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal
+              fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.labelSmall
             )
           },
           colors = NavigationBarItemDefaults.colors(
@@ -288,7 +295,11 @@ fun HomeScreen(
           label = {
             Text(
               text = "Answer Keys (${answerKeys.size})",
-              fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal
+              fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.labelSmall
             )
           },
           colors = NavigationBarItemDefaults.colors(
@@ -315,7 +326,11 @@ fun HomeScreen(
             label = {
               Text(
                 text = "Admin",
-                fontWeight = if (selectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (selectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall
               )
             },
             colors = NavigationBarItemDefaults.colors(
@@ -492,7 +507,7 @@ fun HomeScreen(
       text = {
         Text(
           if (userEmail.isNotBlank()) "Are you sure you want to sign out from $userEmail?"
-          else "Are you sure you want to sign out from NavGrade?"
+          else "Are you sure you want to sign out from NavGrades?"
         )
       },
       confirmButton = {

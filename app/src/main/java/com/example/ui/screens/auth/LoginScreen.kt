@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,8 +89,9 @@ fun LoginScreen(
     ) {
       Column(
         modifier = Modifier
+          .widthIn(max = 480.dp)
           .fillMaxWidth()
-          .padding(24.dp),
+          .padding(horizontal = 24.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
       ) {
@@ -104,7 +106,7 @@ fun LoginScreen(
         ) {
           Image(
             painter = painterResource(id = R.drawable.ic_ng_logo),
-            contentDescription = "NavGrade Logo",
+            contentDescription = "NavGrades Logo",
             modifier = Modifier.size(54.dp, 36.dp)
           )
         }
@@ -112,7 +114,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-          text = "NavGrade",
+          text = "NavGrades",
           style = MaterialTheme.typography.headlineMedium,
           fontWeight = FontWeight.Bold,
           color = TextPrimaryLight
@@ -298,7 +300,7 @@ fun LoginScreen(
               // 1. Admin Login
               OutlinedButton(
                 onClick = {
-                  authViewModel.processUserLogin("admin@navgurukul.org", "NavGrade Admin")
+                  authViewModel.processUserLogin("admin@navgurukul.org", "NavGrades Admin")
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
@@ -315,7 +317,7 @@ fun LoginScreen(
               // 2. Team Login
               OutlinedButton(
                 onClick = {
-                  authViewModel.processUserLogin("team@navgurukul.org", "NavGrade Team")
+                  authViewModel.processUserLogin("team@navgurukul.org", "NavGrades Team")
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
