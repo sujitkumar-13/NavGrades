@@ -1,6 +1,5 @@
 package com.example.ui.screens.auth
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,8 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
@@ -33,16 +30,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,8 +48,6 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.auth.AuthViewModel
 import com.example.ui.theme.BackgroundLight
-import com.example.ui.theme.NavMint
-import com.example.ui.theme.NavOrange
 import com.example.ui.theme.NavPrimary
 import com.example.ui.theme.NavPrimaryContainer
 import com.example.ui.theme.OnNavPrimaryContainer
@@ -75,7 +65,6 @@ fun LoginScreen(
   val context = LocalContext.current
   val isLoading by authViewModel.isLoading.collectAsState()
   val errorMessage by authViewModel.errorMessage.collectAsState()
-  var showDevOptions by remember { mutableStateOf(false) }
 
   Surface(
     modifier = modifier.fillMaxSize(),
@@ -255,79 +244,6 @@ fun LoginScreen(
                     color = OnNavPrimaryContainer,
                     modifier = Modifier.weight(1f)
                   )
-                }
-              }
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Developer Quick Test Toggle
-        TextButton(
-          onClick = { showDevOptions = !showDevOptions }
-        ) {
-          Text(
-            text = if (showDevOptions) "Hide Dev Quick Logins ▲" else "Dev Quick Logins (Click to test roles) ▼",
-            style = MaterialTheme.typography.labelMedium,
-            color = NavOrange,
-            fontWeight = FontWeight.Bold
-          )
-        }
-
-        AnimatedVisibility(visible = showDevOptions) {
-          Card(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(top = 8.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = SurfaceVariantLight),
-            border = BorderStroke(1.dp, OutlineLight)
-          ) {
-            Column(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              Text(
-                text = "Simulate Login with Test Accounts:",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondaryLight
-              )
-
-              // 1. Admin Login
-              OutlinedButton(
-                onClick = {
-                  authViewModel.processUserLogin("sujit@navgurukul.org", "Sujit Kumar")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                  Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = NavPrimary, modifier = Modifier.size(18.dp))
-                  Text("Login as Admin (sujit@navgurukul.org)", fontSize = 13.sp, color = TextPrimaryLight)
-                }
-              }
-
-              // 2. Team Login
-              OutlinedButton(
-                onClick = {
-                  authViewModel.processUserLogin("team@navgurukul.org", "NavGrades Team")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                  Icon(Icons.Default.Group, contentDescription = null, tint = NavMint, modifier = Modifier.size(18.dp))
-                  Text("Login as Team (team@navgurukul.org)", fontSize = 13.sp, color = TextPrimaryLight)
                 }
               }
             }

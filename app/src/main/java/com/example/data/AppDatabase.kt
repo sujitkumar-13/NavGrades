@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
           AppDatabase::class.java,
           "omr_database_v2.db"
         )
-        .fallbackToDestructiveMigration()
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .addCallback(DatabaseCallback(scope))
         .build()
         INSTANCE = instance

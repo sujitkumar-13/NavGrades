@@ -24,13 +24,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.Key
@@ -264,7 +264,7 @@ fun QuizDetailsScreen(
         WorkflowActionCard(
           title = "Update Answer Key",
           subtitle = "View & customize correct answers and question marks for this quiz",
-          icon = Icons.Default.FactCheck,
+          icon = Icons.AutoMirrored.Filled.FactCheck,
           iconBgColor = MaterialTheme.colorScheme.primaryContainer,
           iconTint = MaterialTheme.colorScheme.primary,
           onClick = {

@@ -34,24 +34,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   private val _isLoading = MutableStateFlow(false)
   val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-  // In-memory mock storage for offline/dev testing
-  private val mockApprovedUsers = mutableListOf(
-    ApprovedUserRemote(
-      id = "admin-1",
-      email = "admin@navgurukul.org",
-      name = "NavGrades Admin",
-      role = "admin",
-      approvedAt = "2026-09-01"
-    ),
-    ApprovedUserRemote(
-      id = "member-1",
-      email = "team@navgurukul.org",
-      name = "Assessment Evaluator",
-      role = "team",
-      approvedAt = "2026-09-05"
-    )
-  )
-
   init {
     _authState.value = AuthState.Unauthenticated
   }
@@ -62,7 +44,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
   /**
    * Triggers the Google Sign-In flow using Android Credential Manager.
-   * If credentials are not yet configured or Google Sign-In fails, falls back gracefully with an informative error.
    */
   fun signInWithGoogle(context: Context, serverClientId: String = "") {
     viewModelScope.launch {
@@ -70,9 +51,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
       _errorMessage.value = null
 
       if (serverClientId.isBlank()) {
-        // Dev fallback: Simulate Google sign in with a demo user if no Web Client ID is configured yet
-        Log.i(tag, "No Google serverClientId provided. Prompting demo selection.")
-        _errorMessage.value = "Google Web Client ID is not configured yet. You can use Dev Quick Login below to test all screens!"
+        Log.e(tag, "Google Web Client ID is not configured.")
+        _errorMessage.value = "Authentication service configuration missing. Please contact administrator."
         _isLoading.value = false
         return@launch
       }
@@ -135,28 +115,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
       _isLoading.value = true
       val cleanEmail = email.trim().lowercase()
 
-      if (SupabaseConfig.isConfigured()) {
-        try {
-          val approved = remoteRepo.checkApprovedUser(cleanEmail)
-          if (approved != null) {
-            _authState.value = AuthState.Authenticated(approved)
-          } else {
-            _authState.value = AuthState.NoAccess(cleanEmail)
-          }
-        } catch (e: Exception) {
-          Log.e(tag, "Error processing login for $cleanEmail: ${e.message}", e)
-          _errorMessage.value = "Failed to verify access with database: ${e.message}"
-        }
-      } else {
-        // Mock fallback mode: only whitelisted mock users can log in
-        val mockUser = mockApprovedUsers.find { it.email.equals(cleanEmail, ignoreCase = true) }
-        if (mockUser != null) {
-          _authState.value = AuthState.Authenticated(mockUser)
+      try {
+        val approved = remoteRepo.checkApprovedUser(cleanEmail)
+        if (approved != null) {
+          _authState.value = AuthState.Authenticated(approved)
         } else {
           _authState.value = AuthState.NoAccess(cleanEmail)
         }
+      } catch (e: Exception) {
+        Log.e(tag, "Error processing login for $cleanEmail: ${e.message}", e)
+        _errorMessage.value = "Failed to verify access with database: ${e.message}"
+      } finally {
+        _isLoading.value = false
       }
-      _isLoading.value = false
     }
   }
 
@@ -171,62 +142,48 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   fun loadAdminData() {
     viewModelScope.launch {
       _isLoading.value = true
-      if (SupabaseConfig.isConfigured()) {
+      try {
         _teamMembers.value = remoteRepo.getAllApprovedUsers()
-      } else {
-        _teamMembers.value = mockApprovedUsers.toList()
+      } catch (e: Exception) {
+        Log.e(tag, "Error loading admin data: ${e.message}", e)
+      } finally {
+        _isLoading.value = false
       }
-      _isLoading.value = false
     }
   }
 
   fun addTeamMember(email: String, name: String, role: String = "team") {
     viewModelScope.launch {
-      if (SupabaseConfig.isConfigured()) {
+      try {
         remoteRepo.addApprovedUser(email, name, role)
         loadAdminData()
-      } else {
-        val exists = mockApprovedUsers.any { it.email.equals(email, ignoreCase = true) }
-        if (!exists) {
-          mockApprovedUsers.add(
-            ApprovedUserRemote(
-              id = "user-${System.currentTimeMillis()}",
-              email = email.trim().lowercase(),
-              name = name,
-              role = role,
-              approvedAt = "Today"
-            )
-          )
-        }
-        loadAdminData()
+      } catch (e: Exception) {
+        Log.e(tag, "Error adding team member: ${e.message}", e)
+        _errorMessage.value = "Failed to add member: ${e.message}"
       }
     }
   }
 
   fun updateMemberRole(email: String, newRole: String) {
     viewModelScope.launch {
-      if (SupabaseConfig.isConfigured()) {
+      try {
         remoteRepo.updateUserRole(email, newRole)
         loadAdminData()
-      } else {
-        val index = mockApprovedUsers.indexOfFirst { it.email.equals(email, ignoreCase = true) }
-        if (index != -1) {
-          val user = mockApprovedUsers[index]
-          mockApprovedUsers[index] = user.copy(role = newRole)
-        }
-        loadAdminData()
+      } catch (e: Exception) {
+        Log.e(tag, "Error updating user role: ${e.message}", e)
+        _errorMessage.value = "Failed to update role: ${e.message}"
       }
     }
   }
 
   fun revokeMemberAccess(email: String) {
     viewModelScope.launch {
-      if (SupabaseConfig.isConfigured()) {
+      try {
         remoteRepo.revokeUserAccess(email)
         loadAdminData()
-      } else {
-        mockApprovedUsers.removeAll { it.email.equals(email, ignoreCase = true) }
-        loadAdminData()
+      } catch (e: Exception) {
+        Log.e(tag, "Error revoking user access: ${e.message}", e)
+        _errorMessage.value = "Failed to revoke access: ${e.message}"
       }
     }
   }

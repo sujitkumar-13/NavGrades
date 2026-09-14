@@ -27,15 +27,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.FactCheck
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MenuBook
@@ -257,7 +257,7 @@ fun HomeScreen(
           onClick = { selectedTabIndex = 0 },
           icon = {
             Icon(
-              imageVector = Icons.Default.FormatListBulleted,
+              imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
               contentDescription = "Quizzes",
               modifier = Modifier.size(22.dp)
             )
@@ -287,7 +287,7 @@ fun HomeScreen(
           onClick = { selectedTabIndex = 1 },
           icon = {
             Icon(
-              imageVector = Icons.Default.FactCheck,
+              imageVector = Icons.AutoMirrored.Filled.FactCheck,
               contentDescription = "Answer Keys",
               modifier = Modifier.size(22.dp)
             )
@@ -558,7 +558,7 @@ fun QuizzesTabContent(
           contentAlignment = Alignment.Center
         ) {
           Icon(
-            imageVector = Icons.Default.Assignment,
+            imageVector = Icons.AutoMirrored.Filled.Assignment,
             contentDescription = "No quizzes",
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(40.dp)
