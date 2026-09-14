@@ -74,6 +74,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.NavMint
+import com.example.ui.theme.NavMintContainer
+import com.example.ui.theme.NavOrange
+import com.example.ui.theme.NavOrangeContainer
+import com.example.ui.theme.NavPurple
+import com.example.ui.theme.NavPurpleContainer
+import com.example.ui.theme.NavbarBackground
+import com.example.ui.theme.NavbarBorder
+import com.example.ui.theme.OutlineLight
 import com.example.ui.theme.PrimaryBlue
 import com.example.ui.theme.SecondaryCyan
 import com.example.ui.theme.SuccessGreen
@@ -116,41 +125,54 @@ fun QuizDetailsScreen(
 
   Scaffold(
     topBar = {
-      TopAppBar(
-        title = {
-          Text(
-            text = quiz?.name ?: "Quiz Details",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(NavbarBackground)
+      ) {
+        TopAppBar(
+          title = {
+            Text(
+              text = quiz?.name ?: "Quiz Details",
+              style = MaterialTheme.typography.titleLarge,
+              fontWeight = FontWeight.Bold
+            )
+          },
+          navigationIcon = {
+            IconButton(
+              onClick = onNavigateBack,
+              modifier = Modifier.testTag("back_button")
+            ) {
+              Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+              )
+            }
+          },
+          actions = {
+            IconButton(
+              onClick = { showDeleteDialog = true },
+              modifier = Modifier.testTag("delete_quiz_button")
+            ) {
+              Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete Quiz",
+                tint = MaterialTheme.colorScheme.error
+              )
+            }
+          },
+          colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent
           )
-        },
-        navigationIcon = {
-          IconButton(
-            onClick = onNavigateBack,
-            modifier = Modifier.testTag("back_button")
-          ) {
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = "Back"
-            )
-          }
-        },
-        actions = {
-          IconButton(
-            onClick = { showDeleteDialog = true },
-            modifier = Modifier.testTag("delete_quiz_button")
-          ) {
-            Icon(
-              imageVector = Icons.Default.Delete,
-              contentDescription = "Delete Quiz",
-              tint = MaterialTheme.colorScheme.error
-            )
-          }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-          containerColor = MaterialTheme.colorScheme.surface
         )
-      )
+        // Border-bottom under navbar
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(NavbarBorder)
+        )
+      }
     }
   ) { paddingValues ->
     if (quiz == null) {
@@ -260,8 +282,8 @@ fun QuizDetailsScreen(
           title = "Scan Papers",
           subtitle = "Point camera at completed student OMR sheets to detect marks instantly",
           icon = Icons.Default.CameraAlt,
-          iconBgColor = PrimaryBlue.copy(alpha = 0.15f),
-          iconTint = PrimaryBlue,
+          iconBgColor = NavPurpleContainer,
+          iconTint = NavPurple,
           onClick = { onNavigateToScan(quizId) },
           testTag = "action_scan_papers"
         )
@@ -271,11 +293,11 @@ fun QuizDetailsScreen(
           title = "Review Papers",
           subtitle = "Check scores, question breakdown, and perform manual bubble corrections",
           icon = Icons.Default.RateReview,
-          iconBgColor = SuccessGreen.copy(alpha = 0.15f),
-          iconTint = SuccessGreen,
+          iconBgColor = NavMintContainer,
+          iconTint = NavMint,
           badgeText = if (totalPapers > 0) "$totalPapers Papers" else null,
-          badgeColor = SuccessGreen.copy(alpha = 0.15f),
-          badgeTextColor = SuccessGreen,
+          badgeColor = NavMintContainer,
+          badgeTextColor = NavMint,
           onClick = { onNavigateToReviewPapers(quizId) },
           testTag = "action_review_papers"
         )
@@ -285,11 +307,11 @@ fun QuizDetailsScreen(
           title = "Export",
           subtitle = "Export all scanned student papers to CSV (FirstName, Caste, Marks, etc.)",
           icon = Icons.Default.FileDownload,
-          iconBgColor = WarningAmber.copy(alpha = 0.15f),
-          iconTint = WarningAmber,
+          iconBgColor = NavOrangeContainer,
+          iconTint = NavOrange,
           badgeText = ".CSV",
-          badgeColor = WarningAmberContainer,
-          badgeTextColor = WarningAmber,
+          badgeColor = NavOrangeContainer,
+          badgeTextColor = NavOrange,
           onClick = { showExportDialog = true },
           testTag = "action_export_csv"
         )
@@ -627,6 +649,7 @@ fun WorkflowActionCard(
     colors = CardDefaults.cardColors(
       containerColor = MaterialTheme.colorScheme.surface
     ),
+    border = BorderStroke(1.dp, OutlineLight),
     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
   ) {
     Row(
