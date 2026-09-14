@@ -17,6 +17,10 @@ val supabaseAnonKey: String = localProperties.getProperty("supabase.anon.key")
   ?: System.getenv("SUPABASE_ANON_KEY")
   ?: "placeholder-key"
 
+val googleWebClientId: String = localProperties.getProperty("google.web.client.id")
+  ?: System.getenv("GOOGLE_WEB_CLIENT_ID")
+  ?: ""
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -42,6 +46,7 @@ android {
 
     buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
     buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+    buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
   }
 
   signingConfigs {

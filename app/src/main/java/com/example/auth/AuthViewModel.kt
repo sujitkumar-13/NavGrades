@@ -91,13 +91,27 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
         val result = credentialManager.getCredential(context = context, request = request)
         val credential = result.credential
+        Log.d(tag, "Credential received of type: ${credential::class.java.name}, type=${credential.type}")
 
-        if (credential is GoogleIdTokenCredential) {
-          val email = credential.id
-          val name = credential.displayName ?: email.substringBefore("@")
+        val email: String? = when {
+          credential is GoogleIdTokenCredential -> credential.id
+          credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+            try {
+              val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data)
+              googleIdToken.id
+            } catch (e: Exception) {
+              Log.e(tag, "Failed to parse GoogleIdTokenCredential from data bundle", e)
+              null
+            }
+          }
+          else -> null
+        }
+
+        if (email != null) {
+          val name = email.substringBefore("@")
           processUserLogin(email, name)
         } else {
-          _errorMessage.value = "Unexpected credential received."
+          _errorMessage.value = "Unexpected credential type: ${credential.type}"
         }
       } catch (e: GetCredentialException) {
         Log.e(tag, "Google Sign-In failed: ${e.message}", e)

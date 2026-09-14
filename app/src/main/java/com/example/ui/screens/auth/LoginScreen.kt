@@ -178,7 +178,7 @@ fun LoginScreen(
             // Google Sign-In Button
             Button(
               onClick = {
-                authViewModel.signInWithGoogle(context)
+                authViewModel.signInWithGoogle(context, com.example.BuildConfig.GOOGLE_WEB_CLIENT_ID)
               },
               modifier = Modifier
                 .fillMaxWidth()
