@@ -3,7 +3,6 @@ package com.example.ui.screens.auth
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,14 +18,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LockPerson
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.auth.AuthViewModel
 import com.example.ui.theme.BackgroundLight
-import com.example.ui.theme.ErrorRed
-import com.example.ui.theme.ErrorRedContainer
 import com.example.ui.theme.NavPrimary
+import com.example.ui.theme.NavPrimaryContainer
+import com.example.ui.theme.OnNavPrimaryContainer
 import com.example.ui.theme.OutlineLight
 import com.example.ui.theme.SurfaceLight
 import com.example.ui.theme.SurfaceVariantLight
@@ -51,7 +51,7 @@ import com.example.ui.theme.TextPrimaryLight
 import com.example.ui.theme.TextSecondaryLight
 
 @Composable
-fun AccessDeniedScreen(
+fun NoAccessScreen(
   userEmail: String,
   authViewModel: AuthViewModel,
   modifier: Modifier = Modifier
@@ -70,6 +70,7 @@ fun AccessDeniedScreen(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
+        // NavGrade Logo
         Image(
           painter = painterResource(id = R.drawable.ic_ng_logo),
           contentDescription = "NavGrade Logo",
@@ -78,6 +79,7 @@ fun AccessDeniedScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Card Container
         Card(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(20.dp),
@@ -91,25 +93,26 @@ fun AccessDeniedScreen(
               .padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
+            // Lock Icon
             Box(
               modifier = Modifier
-                .size(68.dp)
+                .size(72.dp)
                 .clip(CircleShape)
-                .background(ErrorRedContainer),
+                .background(NavPrimaryContainer),
               contentAlignment = Alignment.Center
             ) {
               Icon(
-                imageVector = Icons.Default.Block,
-                contentDescription = "Access Denied",
-                tint = ErrorRed,
-                modifier = Modifier.size(34.dp)
+                imageVector = Icons.Default.LockPerson,
+                contentDescription = "Access Not Granted",
+                tint = NavPrimary,
+                modifier = Modifier.size(36.dp)
               )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-              text = "Access Denied",
+              text = "Access Not Granted",
               style = MaterialTheme.typography.headlineSmall,
               fontWeight = FontWeight.Bold,
               color = TextPrimaryLight
@@ -118,7 +121,7 @@ fun AccessDeniedScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-              text = "Your access request for NavGrade was declined by the administrator. Please contact your organization lead if you believe this is an error.",
+              text = "You don't have access to NavGrade. Please coordinate with your team lead to get added.",
               style = MaterialTheme.typography.bodyMedium,
               color = TextSecondaryLight,
               textAlign = TextAlign.Center,
@@ -127,12 +130,12 @@ fun AccessDeniedScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Email Display Box
             Surface(
-              modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, OutlineLight, RoundedCornerShape(12.dp)),
+              modifier = Modifier.fillMaxWidth(),
               color = SurfaceVariantLight,
-              shape = RoundedCornerShape(12.dp)
+              shape = RoundedCornerShape(12.dp),
+              border = BorderStroke(1.dp, OutlineLight)
             ) {
               Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -142,7 +145,7 @@ fun AccessDeniedScreen(
                 Icon(
                   imageVector = Icons.Default.Email,
                   contentDescription = null,
-                  tint = ErrorRed,
+                  tint = NavPrimary,
                   modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -155,15 +158,23 @@ fun AccessDeniedScreen(
               }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+              text = "Ask your admin to add your email via the Team section.",
+              style = MaterialTheme.typography.bodySmall,
+              color = TextSecondaryLight,
+              textAlign = TextAlign.Center
+            )
+
             Spacer(modifier = Modifier.height(28.dp))
 
+            // Sign Out button
             Button(
-              onClick = {
-                authViewModel.signOut()
-              },
+              onClick = { authViewModel.signOut() },
               modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(50.dp),
               shape = RoundedCornerShape(12.dp),
               colors = ButtonDefaults.buttonColors(
                 containerColor = NavPrimary,

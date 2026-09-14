@@ -10,7 +10,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.remote.RemoteNavGradeRepository
 import com.example.data.remote.SupabaseConfig
-import com.example.data.remote.model.AccessRequestRemote
 import com.example.data.remote.model.ApprovedUserRemote
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -26,9 +25,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
   val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-  private val _pendingRequests = MutableStateFlow<List<AccessRequestRemote>>(emptyList())
-  val pendingRequests: StateFlow<List<AccessRequestRemote>> = _pendingRequests.asStateFlow()
-
   private val _teamMembers = MutableStateFlow<List<ApprovedUserRemote>>(emptyList())
   val teamMembers: StateFlow<List<ApprovedUserRemote>> = _teamMembers.asStateFlow()
 
@@ -38,7 +34,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   private val _isLoading = MutableStateFlow(false)
   val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-  // In-memory mock storage for immediate offline/dev testing
+  // In-memory mock storage for offline/dev testing
   private val mockApprovedUsers = mutableListOf(
     ApprovedUserRemote(
       id = "admin-1",
@@ -56,25 +52,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     )
   )
 
-  private val mockAccessRequests = mutableListOf(
-    AccessRequestRemote(
-      id = "req-1",
-      email = "priya.sharma@gmail.com",
-      name = "Priya Sharma",
-      status = "pending",
-      requestedAt = "2026-09-14 10:30 AM"
-    ),
-    AccessRequestRemote(
-      id = "req-2",
-      email = "rahul.verma@gmail.com",
-      name = "Rahul Verma",
-      status = "pending",
-      requestedAt = "2026-09-14 11:15 AM"
-    )
-  )
-
   init {
-    // Check if there was an active session or initial state
     _authState.value = AuthState.Unauthenticated
   }
 
@@ -134,7 +112,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   /**
-   * Evaluates user approval status against database (or dev mock if unconfigured).
+   * Whitelist-only login check.
+   * If the user's email exists in approved_users → Authenticated.
+   * Otherwise → NoAccess. No requests are submitted, no pending state exists.
    */
   fun processUserLogin(email: String, name: String) {
     viewModelScope.launch {
@@ -147,80 +127,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
           if (approved != null) {
             _authState.value = AuthState.Authenticated(approved)
           } else {
-            val req = remoteRepo.checkAccessRequest(cleanEmail)
-            if (req?.status == "denied") {
-              _authState.value = AuthState.AccessDenied(cleanEmail)
-            } else {
-              if (req == null) {
-                remoteRepo.submitAccessRequest(cleanEmail, name)
-              }
-              _authState.value = AuthState.PendingApproval(cleanEmail, name)
-            }
+            _authState.value = AuthState.NoAccess(cleanEmail)
           }
         } catch (e: Exception) {
           Log.e(tag, "Error processing login for $cleanEmail: ${e.message}", e)
           _errorMessage.value = "Failed to verify access with database: ${e.message}"
         }
       } else {
-        // Mock fallback mode:
+        // Mock fallback mode: only whitelisted mock users can log in
         val mockUser = mockApprovedUsers.find { it.email.equals(cleanEmail, ignoreCase = true) }
         if (mockUser != null) {
           _authState.value = AuthState.Authenticated(mockUser)
         } else {
-          val mockReq = mockAccessRequests.find { it.email.equals(cleanEmail, ignoreCase = true) }
-          if (mockReq?.status == "denied") {
-            _authState.value = AuthState.AccessDenied(cleanEmail)
-          } else {
-            if (mockReq == null) {
-              mockAccessRequests.add(
-                AccessRequestRemote(
-                  id = "req-${System.currentTimeMillis()}",
-                  email = cleanEmail,
-                  name = name,
-                  status = "pending",
-                  requestedAt = "Just now"
-                )
-              )
-            }
-            _authState.value = AuthState.PendingApproval(cleanEmail, name)
-          }
-        }
-      }
-      _isLoading.value = false
-    }
-  }
-
-  /**
-   * Re-evaluates status (called by "Try Again" button on Pending Approval screen).
-   */
-  fun checkApprovalStatus(email: String, name: String) {
-    viewModelScope.launch {
-      _isLoading.value = true
-      val cleanEmail = email.trim().lowercase()
-
-      if (SupabaseConfig.isConfigured()) {
-        val approved = remoteRepo.checkApprovedUser(cleanEmail)
-        if (approved != null) {
-          _authState.value = AuthState.Authenticated(approved)
-        } else {
-          val req = remoteRepo.checkAccessRequest(cleanEmail)
-          if (req?.status == "denied") {
-            _authState.value = AuthState.AccessDenied(cleanEmail)
-          } else {
-            _authState.value = AuthState.PendingApproval(cleanEmail, name)
-          }
-        }
-      } else {
-        val mockUser = mockApprovedUsers.find { it.email.equals(cleanEmail, ignoreCase = true) }
-        if (mockUser != null) {
-          _authState.value = AuthState.Authenticated(mockUser)
-        } else {
-          val mockReq = mockAccessRequests.find { it.email.equals(cleanEmail, ignoreCase = true) }
-          if (mockReq?.status == "denied") {
-            _authState.value = AuthState.AccessDenied(cleanEmail)
-          } else {
-            _authState.value = AuthState.PendingApproval(cleanEmail, name)
-          }
+          _authState.value = AuthState.NoAccess(cleanEmail)
         }
       }
       _isLoading.value = false
@@ -239,47 +158,31 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     viewModelScope.launch {
       _isLoading.value = true
       if (SupabaseConfig.isConfigured()) {
-        _pendingRequests.value = remoteRepo.getAllPendingRequests()
         _teamMembers.value = remoteRepo.getAllApprovedUsers()
       } else {
-        _pendingRequests.value = mockAccessRequests.filter { it.status == "pending" }
         _teamMembers.value = mockApprovedUsers.toList()
       }
       _isLoading.value = false
     }
   }
 
-  fun approveRequest(request: AccessRequestRemote, role: String = "member") {
+  fun addTeamMember(email: String, name: String, role: String = "team") {
     viewModelScope.launch {
       if (SupabaseConfig.isConfigured()) {
-        remoteRepo.approveAccessRequest(request.id, request.email, request.name, role)
+        remoteRepo.addApprovedUser(email, name, role)
         loadAdminData()
       } else {
-        mockAccessRequests.removeAll { it.id == request.id || it.email == request.email }
-        mockApprovedUsers.add(
-          ApprovedUserRemote(
-            id = "user-${System.currentTimeMillis()}",
-            email = request.email,
-            name = request.name,
-            role = role,
-            approvedAt = "Today"
+        val exists = mockApprovedUsers.any { it.email.equals(email, ignoreCase = true) }
+        if (!exists) {
+          mockApprovedUsers.add(
+            ApprovedUserRemote(
+              id = "user-${System.currentTimeMillis()}",
+              email = email.trim().lowercase(),
+              name = name,
+              role = role,
+              approvedAt = "Today"
+            )
           )
-        )
-        loadAdminData()
-      }
-    }
-  }
-
-  fun denyRequest(requestId: String) {
-    viewModelScope.launch {
-      if (SupabaseConfig.isConfigured()) {
-        remoteRepo.denyAccessRequest(requestId)
-        loadAdminData()
-      } else {
-        val index = mockAccessRequests.indexOfFirst { it.id == requestId }
-        if (index != -1) {
-          val req = mockAccessRequests[index]
-          mockAccessRequests[index] = req.copy(status = "denied")
         }
         loadAdminData()
       }

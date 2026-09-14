@@ -164,7 +164,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-              text = "Sign in with your Google account. If your account is not yet on the approved list, an access request will be sent to the administrator.",
+              text = "Sign in with your Google account. Access is restricted to authorized team members only.",
               style = MaterialTheme.typography.bodySmall,
               color = TextSecondaryLight,
               textAlign = TextAlign.Center,

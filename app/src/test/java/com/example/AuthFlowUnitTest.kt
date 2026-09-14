@@ -2,7 +2,6 @@ package com.example
 
 import com.example.auth.AuthState
 import com.example.data.remote.SupabaseConfig
-import com.example.data.remote.model.AccessRequestRemote
 import com.example.data.remote.model.ApprovedUserRemote
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -33,23 +32,6 @@ class AuthFlowUnitTest {
   }
 
   @Test
-  fun testAccessRequestModelSerialization() {
-    val req = AccessRequestRemote(
-      id = "req-456",
-      email = "priya@gmail.com",
-      name = "Priya Sharma",
-      status = "pending",
-      requestedAt = "2026-09-14 10:00"
-    )
-
-    val jsonString = Json.encodeToString(AccessRequestRemote.serializer(), req)
-    val decoded = Json.decodeFromString(AccessRequestRemote.serializer(), jsonString)
-
-    assertEquals("pending", decoded.status)
-    assertEquals("priya@gmail.com", decoded.email)
-  }
-
-  @Test
   fun testSupabaseConfigDetectsPlaceholder() {
     // Should detect that placeholder is not a configured URL
     assertFalse(SupabaseConfig.isConfigured())
@@ -66,12 +48,33 @@ class AuthFlowUnitTest {
 
     assertTrue(state.user.role.equals("admin", ignoreCase = true))
 
-    val memberUser = ApprovedUserRemote(
-      email = "member@navgurukul.org",
-      name = "Member",
-      role = "member"
+    val teamUser = ApprovedUserRemote(
+      email = "team@navgurukul.org",
+      name = "Team Member",
+      role = "team"
     )
-    val memberState = AuthState.Authenticated(memberUser)
-    assertFalse(memberState.user.role.equals("admin", ignoreCase = true))
+    val teamState = AuthState.Authenticated(teamUser)
+    assertFalse(teamState.user.role.equals("admin", ignoreCase = true))
+  }
+
+  @Test
+  fun testNoAccessStateHoldsEmail() {
+    // Whitelist-only: unknown email → NoAccess state
+    val unknownEmail = "unknown@gmail.com"
+    val state = AuthState.NoAccess(unknownEmail)
+    assertEquals(unknownEmail, state.email)
+  }
+
+  @Test
+  fun testAuthenticatedStateHoldsUser() {
+    val user = ApprovedUserRemote(
+      id = "admin-1",
+      email = "admin@navgurukul.org",
+      name = "NavGrade Admin",
+      role = "admin"
+    )
+    val state = AuthState.Authenticated(user)
+    assertEquals("admin@navgurukul.org", state.user.email)
+    assertEquals("admin", state.user.role)
   }
 }

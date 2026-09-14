@@ -25,12 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -54,10 +51,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,7 +59,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,7 +71,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.auth.AuthViewModel
-import com.example.data.remote.model.AccessRequestRemote
 import com.example.data.remote.model.ApprovedUserRemote
 import com.example.ui.theme.BackgroundLight
 import com.example.ui.theme.ErrorRed
@@ -183,8 +174,6 @@ fun AdminPanelContent(
   authViewModel: AuthViewModel,
   modifier: Modifier = Modifier
 ) {
-  var selectedTabIndex by remember { mutableIntStateOf(0) }
-  val pendingRequests by authViewModel.pendingRequests.collectAsState()
   val teamMembers by authViewModel.teamMembers.collectAsState()
   val isLoading by authViewModel.isLoading.collectAsState()
 
@@ -198,130 +187,34 @@ fun AdminPanelContent(
   }
 
   Box(modifier = modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize()) {
-      // Tab Navigation Row with Refresh
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(SurfaceLight),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        TabRow(
-          selectedTabIndex = selectedTabIndex,
-          containerColor = SurfaceLight,
-          contentColor = NavPrimary,
-          modifier = Modifier.weight(1f),
-          indicator = { tabPositions ->
-            TabRowDefaults.SecondaryIndicator(
-              modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-              color = NavPrimary,
-              height = 3.dp
-            )
-          }
-        ) {
-          Tab(
-            selected = selectedTabIndex == 0,
-            onClick = { selectedTabIndex = 0 },
-            text = {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-              ) {
-                Icon(Icons.Default.HourglassEmpty, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(
-                  text = "Requests (${pendingRequests.size})",
-                  fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal
-                )
-              }
-            }
-          )
+    // Team Members List — shown directly, no tabs
+    TeamMembersList(
+      members = teamMembers.filter {
+        it.name.contains(searchQuery, ignoreCase = true) ||
+          it.email.contains(searchQuery, ignoreCase = true)
+      },
+      searchQuery = searchQuery,
+      onSearchQueryChange = { searchQuery = it },
+      isLoading = isLoading,
+      onUpdateRole = { email, newRole -> authViewModel.updateMemberRole(email, newRole) },
+      onRevoke = { email -> authViewModel.revokeMemberAccess(email) }
+    )
 
-          Tab(
-            selected = selectedTabIndex == 1,
-            onClick = { selectedTabIndex = 1 },
-            text = {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-              ) {
-                Icon(Icons.Default.Group, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(
-                  text = "Team (${teamMembers.size})",
-                  fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal
-                )
-              }
-            }
-          )
-        }
-
-        IconButton(
-          onClick = { authViewModel.loadAdminData() },
-          modifier = Modifier.padding(end = 4.dp)
-        ) {
-          Icon(
-            imageVector = Icons.Default.Refresh,
-            contentDescription = "Refresh",
-            tint = TextSecondaryLight
-          )
-        }
-      }
-
-      // Border under tabs
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(1.dp)
-          .background(NavbarBorder)
-      )
-
-      // Tab Content
-      AnimatedContent(
-        targetState = selectedTabIndex,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-        label = "AdminTabs"
-      ) { tabIndex ->
-        if (tabIndex == 0) {
-          // TAB 0: PENDING REQUESTS
-          PendingRequestsList(
-            requests = pendingRequests,
-            isLoading = isLoading,
-            onApprove = { req -> authViewModel.approveRequest(req, role = "team") },
-            onDeny = { reqId -> authViewModel.denyRequest(reqId) }
-          )
-        } else {
-          // TAB 1: TEAM MEMBERS
-          TeamMembersList(
-            members = teamMembers.filter {
-              it.name.contains(searchQuery, ignoreCase = true) ||
-                it.email.contains(searchQuery, ignoreCase = true)
-            },
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            isLoading = isLoading,
-            onUpdateRole = { email, newRole -> authViewModel.updateMemberRole(email, newRole) },
-            onRevoke = { email -> authViewModel.revokeMemberAccess(email) }
-          )
-        }
-      }
-    }
-
-    // Floating Action Button when on Team tab
-    if (selectedTabIndex == 1) {
-      FloatingActionButton(
-        onClick = { showAddUserDialog = true },
-        containerColor = NavPrimary,
-        contentColor = SurfaceLight,
-        shape = CircleShape,
-        modifier = Modifier
-          .align(Alignment.BottomEnd)
-          .padding(16.dp)
-      ) {
-        Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "Add User")
-      }
+    // FAB: Add Team Member
+    FloatingActionButton(
+      onClick = { showAddUserDialog = true },
+      containerColor = NavPrimary,
+      contentColor = SurfaceLight,
+      shape = CircleShape,
+      modifier = Modifier
+        .align(Alignment.BottomEnd)
+        .padding(16.dp)
+    ) {
+      Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "Add Team Member")
     }
   }
 
-  // Dialog: Add Whitelist User Directly
+  // Dialog: Add Team Member Directly
   if (showAddUserDialog) {
     AlertDialog(
       onDismissRequest = { showAddUserDialog = false },
@@ -331,7 +224,7 @@ fun AdminPanelContent(
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           Text(
-            "Directly whitelist a Google email so they can log in without waiting for approval.",
+            "Add a Google email to the whitelist. This person will be able to log in immediately.",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondaryLight
           )
@@ -355,13 +248,11 @@ fun AdminPanelContent(
         Button(
           onClick = {
             if (newEmailText.isNotBlank()) {
-              val fakeReq = AccessRequestRemote(
-                id = "direct-${System.currentTimeMillis()}",
+              authViewModel.addTeamMember(
                 email = newEmailText.trim(),
                 name = newNameText.trim().ifBlank { newEmailText.substringBefore("@") },
-                status = "approved"
+                role = "team"
               )
-              authViewModel.approveRequest(fakeReq, "team")
               newEmailText = ""
               newNameText = ""
               showAddUserDialog = false
@@ -381,168 +272,7 @@ fun AdminPanelContent(
   }
 }
 
-@Composable
-private fun PendingRequestsList(
-  requests: List<AccessRequestRemote>,
-  isLoading: Boolean,
-  onApprove: (AccessRequestRemote) -> Unit,
-  onDeny: (String) -> Unit
-) {
-  if (isLoading && requests.isEmpty()) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-      CircularProgressIndicator(color = NavPrimary)
-    }
-    return
-  }
 
-  if (requests.isEmpty()) {
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(32.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-          modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .background(SuccessGreenContainer),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = null,
-            tint = SuccessGreen,
-            modifier = Modifier.size(32.dp)
-          )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-          text = "No Pending Requests",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
-          color = TextPrimaryLight
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-          text = "All access requests have been reviewed.",
-          style = MaterialTheme.typography.bodySmall,
-          color = TextSecondaryLight
-        )
-      }
-    }
-    return
-  }
-
-  LazyColumn(
-    modifier = Modifier.fillMaxSize(),
-    contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(12.dp)
-  ) {
-    items(requests, key = { it.id }) { request ->
-      Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceLight),
-        border = BorderStroke(1.dp, OutlineLight),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(NavOrangeContainer),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = request.name.take(1).uppercase().ifBlank { "U" },
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = OnNavOrangeContainer
-              )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = request.name.ifBlank { "New Requester" },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimaryLight
-              )
-              Text(
-                text = request.email,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondaryLight
-              )
-              if (!request.requestedAt.isNullOrBlank()) {
-                Text(
-                  text = "Requested: ${request.requestedAt}",
-                  fontSize = 11.sp,
-                  color = TextSecondaryLight
-                )
-              }
-            }
-          }
-
-          Spacer(modifier = Modifier.height(14.dp))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            // Approve Button
-            Button(
-              onClick = { onApprove(request) },
-              modifier = Modifier
-                .weight(1f)
-                .height(40.dp),
-              shape = RoundedCornerShape(10.dp),
-              colors = ButtonDefaults.buttonColors(
-                containerColor = SuccessGreen,
-                contentColor = SurfaceLight
-              )
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-              ) {
-                Icon(Icons.Default.Check, contentDescription = "Approve", modifier = Modifier.size(16.dp))
-                Text("Approve", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-              }
-            }
-
-            // Deny Button
-            OutlinedButton(
-              onClick = { onDeny(request.id) },
-              modifier = Modifier
-                .weight(1f)
-                .height(40.dp),
-              shape = RoundedCornerShape(10.dp),
-              border = BorderStroke(1.dp, ErrorRed),
-              colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = ErrorRed
-              )
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-              ) {
-                Icon(Icons.Default.Close, contentDescription = "Deny", modifier = Modifier.size(16.dp))
-                Text("Deny", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 @Composable
 private fun TeamMembersList(

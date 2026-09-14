@@ -1,7 +1,6 @@
 package com.example.data.remote
 
 import android.util.Log
-import com.example.data.remote.model.AccessRequestRemote
 import com.example.data.remote.model.AnswerKeyItemRemote
 import com.example.data.remote.model.AnswerKeySetRemote
 import com.example.data.remote.model.ApprovedUserRemote
@@ -165,84 +164,21 @@ class RemoteNavGradeRepository(
     }
   }
 
-  suspend fun checkAccessRequest(email: String): AccessRequestRemote? {
-    if (!SupabaseConfig.isConfigured()) return null
-    return try {
-      client.postgrest["access_requests"].select {
-        filter { eq("email", email.trim().lowercase()) }
-      }.decodeSingleOrNull<AccessRequestRemote>()
-    } catch (e: Exception) {
-      Log.e(tag, "Error checking access request $email: ${e.message}", e)
-      null
-    }
-  }
-
-  suspend fun submitAccessRequest(email: String, name: String): Boolean {
+  suspend fun addApprovedUser(email: String, name: String, role: String = "team"): Boolean {
     if (!SupabaseConfig.isConfigured()) return false
     return try {
-      val existing = checkAccessRequest(email)
+      val existing = checkApprovedUser(email)
       if (existing == null) {
-        val request = AccessRequestRemote(
+        val user = ApprovedUserRemote(
           email = email.trim().lowercase(),
           name = name,
-          status = "pending"
+          role = role
         )
-        client.postgrest["access_requests"].insert(request)
+        client.postgrest["approved_users"].insert(user)
       }
       true
     } catch (e: Exception) {
-      Log.e(tag, "Error submitting access request: ${e.message}", e)
-      false
-    }
-  }
-
-  suspend fun getAllPendingRequests(): List<AccessRequestRemote> {
-    if (!SupabaseConfig.isConfigured()) return emptyList()
-    return try {
-      client.postgrest["access_requests"].select {
-        filter { eq("status", "pending") }
-      }.decodeList<AccessRequestRemote>()
-    } catch (e: Exception) {
-      Log.e(tag, "Error fetching pending requests: ${e.message}", e)
-      emptyList()
-    }
-  }
-
-  suspend fun approveAccessRequest(requestId: String, email: String, name: String, role: String = "member"): Boolean {
-    if (!SupabaseConfig.isConfigured()) return false
-    return try {
-      // 1. Insert into approved_users
-      val user = ApprovedUserRemote(
-        email = email.trim().lowercase(),
-        name = name,
-        role = role
-      )
-      client.postgrest["approved_users"].insert(user)
-
-      // 2. Update status in access_requests
-      client.postgrest["access_requests"].update({
-        set("status", "approved")
-      }) {
-        filter { eq("id", requestId) }
-      }
-      true
-    } catch (e: Exception) {
-      Log.e(tag, "Error approving request $requestId: ${e.message}", e)
-      false
-    }
-  }
-
-  suspend fun denyAccessRequest(requestId: String): Boolean {
-    if (!SupabaseConfig.isConfigured()) return false
-    return try {
-      client.postgrest["access_requests"].update({
-        set("status", "denied")
-      }) {
-        filter { eq("id", requestId) }
-      }
-      true
-    } catch (e: Exception) {
-      Log.e(tag, "Error denying request $requestId: ${e.message}", e)
+      Log.e(tag, "Error adding approved user $email: ${e.message}", e)
       false
     }
   }

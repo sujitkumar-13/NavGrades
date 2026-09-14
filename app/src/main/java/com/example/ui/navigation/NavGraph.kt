@@ -42,9 +42,8 @@ import com.example.ui.screens.QuizDetailsScreen
 import com.example.ui.screens.ReviewPapersScreen
 import com.example.ui.screens.ScanPapersScreen
 import com.example.ui.screens.admin.AdminPanelScreen
-import com.example.ui.screens.auth.AccessDeniedScreen
 import com.example.ui.screens.auth.LoginScreen
-import com.example.ui.screens.auth.PendingApprovalScreen
+import com.example.ui.screens.auth.NoAccessScreen
 import com.example.ui.theme.BackgroundLight
 import com.example.ui.theme.NavPrimary
 import com.example.ui.theme.TextPrimaryLight
@@ -84,16 +83,8 @@ fun OmrNavGraph(
         LoginScreen(authViewModel = authViewModel)
       }
 
-      is AuthState.PendingApproval -> {
-        PendingApprovalScreen(
-          userEmail = state.email,
-          userName = state.name,
-          authViewModel = authViewModel
-        )
-      }
-
-      is AuthState.AccessDenied -> {
-        AccessDeniedScreen(
+      is AuthState.NoAccess -> {
+        NoAccessScreen(
           userEmail = state.email,
           authViewModel = authViewModel
         )

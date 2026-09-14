@@ -12,14 +12,6 @@ data class ApprovedUserRemote(
   @SerialName("approved_at") val approvedAt: String? = null
 )
 
-@Serializable
-data class AccessRequestRemote(
-  val id: String = "",
-  val email: String,
-  val name: String = "",
-  val status: String = "pending", // "pending", "approved", "denied"
-  @SerialName("requested_at") val requestedAt: String? = null
-)
 
 @Serializable
 data class QuizRemote(

@@ -302,35 +302,15 @@ fun HomeScreen(
         )
 
         if (isAdmin) {
-          val pendingRequests = authViewModel?.pendingRequests?.collectAsState()?.value ?: emptyList()
           NavigationBarItem(
             selected = selectedTabIndex == 2,
             onClick = { selectedTabIndex = 2 },
             icon = {
-              if (pendingRequests.isNotEmpty()) {
-                BadgedBox(
-                  badge = {
-                    Badge(
-                      containerColor = MaterialTheme.colorScheme.primary,
-                      contentColor = Color.White
-                    ) {
-                      Text("${pendingRequests.size}")
-                    }
-                  }
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.AdminPanelSettings,
-                    contentDescription = "Admin Panel",
-                    modifier = Modifier.size(22.dp)
-                  )
-                }
-              } else {
-                Icon(
-                  imageVector = Icons.Default.AdminPanelSettings,
-                  contentDescription = "Admin Panel",
-                  modifier = Modifier.size(22.dp)
-                )
-              }
+              Icon(
+                imageVector = Icons.Default.AdminPanelSettings,
+                contentDescription = "Admin Panel",
+                modifier = Modifier.size(22.dp)
+              )
             },
             label = {
               Text(
