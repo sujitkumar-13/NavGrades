@@ -26,12 +26,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FormatListNumbered
@@ -83,16 +85,27 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.example.data.model.AnswerKeySetEntity
 import com.example.data.model.QuizEntity
+import com.example.data.repository.SyncStatus
 import com.example.ui.components.CreateQuizDialog
+import com.example.ui.theme.ErrorRed
+import com.example.ui.theme.ErrorRedContainer
 import com.example.ui.theme.NavCoral
 import com.example.ui.theme.NavOrange
+import com.example.ui.theme.NavOrangeContainer
 import com.example.ui.theme.NavbarBackground
 import com.example.ui.theme.NavbarBorder
 import com.example.ui.theme.OutlineLight
 import com.example.ui.theme.PrimaryBlue
 import com.example.ui.theme.PrimaryContainer
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import com.example.auth.AuthViewModel
+import com.example.ui.screens.admin.AdminPanelContent
 import com.example.ui.theme.SecondaryCyan
 import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.SuccessGreenContainer
+import com.example.ui.theme.SurfaceVariantLight
+import com.example.ui.theme.TextSecondaryLight
 import com.example.ui.viewmodel.OmrViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +115,12 @@ fun HomeScreen(
   onNavigateToCreateQuiz: () -> Unit,
   onNavigateToQuizDetails: (String) -> Unit,
   onNavigateToCreateAnswerKey: () -> Unit,
-  onNavigateToEditAnswerKey: (String) -> Unit
+  onNavigateToEditAnswerKey: (String) -> Unit,
+  onNavigateToAdminPanel: (() -> Unit)? = null,
+  onSignOut: (() -> Unit)? = null,
+  isAdmin: Boolean = false,
+  userEmail: String = "",
+  authViewModel: AuthViewModel? = null
 ) {
   var selectedTabIndex by remember { mutableIntStateOf(0) }
   val quizzes by viewModel.allQuizzes.collectAsState()
@@ -112,6 +130,7 @@ fun HomeScreen(
   var keyToDuplicate by remember { mutableStateOf<AnswerKeySetEntity?>(null) }
   var duplicateNameText by remember { mutableStateOf("") }
   var showCreateQuizDialog by remember { mutableStateOf(false) }
+  var showSignOutDialog by remember { mutableStateOf(false) }
 
   Scaffold(
     containerColor = MaterialTheme.colorScheme.background,
@@ -139,7 +158,76 @@ fun HomeScreen(
               )
             }
           },
-          actions = {},
+          actions = {
+            // Cloud Sync Indicator Chip
+            val syncStatus by viewModel.syncStatus.collectAsState()
+            Surface(
+              onClick = { viewModel.triggerSync() },
+              shape = RoundedCornerShape(16.dp),
+              color = when (syncStatus) {
+                SyncStatus.SYNCED -> SuccessGreenContainer
+                SyncStatus.SYNCING -> NavOrangeContainer
+                SyncStatus.OFFLINE -> SurfaceVariantLight
+                SyncStatus.ERROR -> ErrorRedContainer
+              },
+              border = BorderStroke(
+                1.dp,
+                when (syncStatus) {
+                  SyncStatus.SYNCED -> SuccessGreen.copy(alpha = 0.3f)
+                  SyncStatus.SYNCING -> NavOrange.copy(alpha = 0.3f)
+                  SyncStatus.OFFLINE -> OutlineLight
+                  SyncStatus.ERROR -> ErrorRed.copy(alpha = 0.3f)
+                }
+              ),
+              modifier = Modifier.padding(end = 4.dp)
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                Box(
+                  modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(
+                      when (syncStatus) {
+                        SyncStatus.SYNCED -> SuccessGreen
+                        SyncStatus.SYNCING -> NavOrange
+                        SyncStatus.OFFLINE -> TextSecondaryLight
+                        SyncStatus.ERROR -> ErrorRed
+                      }
+                    )
+                )
+                Text(
+                  text = when (syncStatus) {
+                    SyncStatus.SYNCED -> "Synced"
+                    SyncStatus.SYNCING -> "Syncing..."
+                    SyncStatus.OFFLINE -> "Offline"
+                    SyncStatus.ERROR -> "Sync Error"
+                  },
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.SemiBold,
+                  color = when (syncStatus) {
+                    SyncStatus.SYNCED -> SuccessGreen
+                    SyncStatus.SYNCING -> NavOrange
+                    SyncStatus.OFFLINE -> TextSecondaryLight
+                    SyncStatus.ERROR -> ErrorRed
+                  }
+                )
+              }
+            }
+
+            if (onSignOut != null) {
+              IconButton(onClick = { showSignOutDialog = true }) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Logout,
+                  contentDescription = "Sign Out",
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+          },
           colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent
           )
@@ -212,6 +300,54 @@ fun HomeScreen(
           ),
           modifier = Modifier.testTag("tab_answer_keys")
         )
+
+        if (isAdmin) {
+          val pendingRequests = authViewModel?.pendingRequests?.collectAsState()?.value ?: emptyList()
+          NavigationBarItem(
+            selected = selectedTabIndex == 2,
+            onClick = { selectedTabIndex = 2 },
+            icon = {
+              if (pendingRequests.isNotEmpty()) {
+                BadgedBox(
+                  badge = {
+                    Badge(
+                      containerColor = MaterialTheme.colorScheme.primary,
+                      contentColor = Color.White
+                    ) {
+                      Text("${pendingRequests.size}")
+                    }
+                  }
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = "Admin Panel",
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
+              } else {
+                Icon(
+                  imageVector = Icons.Default.AdminPanelSettings,
+                  contentDescription = "Admin Panel",
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+            },
+            label = {
+              Text(
+                text = "Admin",
+                fontWeight = if (selectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal
+              )
+            },
+            colors = NavigationBarItemDefaults.colors(
+              selectedIconColor = MaterialTheme.colorScheme.primary,
+              selectedTextColor = MaterialTheme.colorScheme.primary,
+              unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+              unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+              indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            ),
+            modifier = Modifier.testTag("tab_admin")
+          )
+        }
       }
     },
     floatingActionButton = {
@@ -224,7 +360,7 @@ fun HomeScreen(
           contentColor = MaterialTheme.colorScheme.onPrimary,
           modifier = Modifier.testTag("fab_new_quiz")
         )
-      } else {
+      } else if (selectedTabIndex == 1) {
         ExtendedFloatingActionButton(
           onClick = onNavigateToCreateAnswerKey,
           icon = { Icon(Icons.Default.Add, contentDescription = "Add Key") },
@@ -241,29 +377,41 @@ fun HomeScreen(
       transitionSpec = { fadeIn() togetherWith fadeOut() },
       label = "HomeTabContent"
     ) { tabIndex ->
-      if (tabIndex == 0) {
-        // TAB 1: QUIZZES
-        QuizzesTabContent(
-          quizzes = quizzes,
-          answerKeys = answerKeys,
-          paddingValues = paddingValues,
-          onNavigateToCreateQuiz = { showCreateQuizDialog = true },
-          onNavigateToQuizDetails = onNavigateToQuizDetails
-        )
-      } else {
-        // TAB 2: ANSWER KEYS
-        AnswerKeysTabContent(
-          answerKeys = answerKeys,
-          quizzes = quizzes,
-          paddingValues = paddingValues,
-          onNavigateToCreateAnswerKey = onNavigateToCreateAnswerKey,
-          onNavigateToEditAnswerKey = onNavigateToEditAnswerKey,
-          onDuplicateKey = { key ->
-            keyToDuplicate = key
-            duplicateNameText = "${key.name} (Copy)"
-          },
-          onDeleteKey = { key -> keyToDelete = key }
-        )
+      when (tabIndex) {
+        0 -> {
+          // TAB 1: QUIZZES
+          QuizzesTabContent(
+            quizzes = quizzes,
+            answerKeys = answerKeys,
+            paddingValues = paddingValues,
+            onNavigateToCreateQuiz = { showCreateQuizDialog = true },
+            onNavigateToQuizDetails = onNavigateToQuizDetails
+          )
+        }
+        1 -> {
+          // TAB 2: ANSWER KEYS
+          AnswerKeysTabContent(
+            answerKeys = answerKeys,
+            quizzes = quizzes,
+            paddingValues = paddingValues,
+            onNavigateToCreateAnswerKey = onNavigateToCreateAnswerKey,
+            onNavigateToEditAnswerKey = onNavigateToEditAnswerKey,
+            onDuplicateKey = { key ->
+              keyToDuplicate = key
+              duplicateNameText = "${key.name} (Copy)"
+            },
+            onDeleteKey = { key -> keyToDelete = key }
+          )
+        }
+        2 -> {
+          // TAB 3: ADMIN PANEL
+          if (authViewModel != null) {
+            AdminPanelContent(
+              authViewModel = authViewModel,
+              modifier = Modifier.padding(paddingValues)
+            )
+          }
+        }
       }
     }
   }
@@ -350,6 +498,36 @@ fun HomeScreen(
       },
       dismissButton = {
         TextButton(onClick = { keyToDuplicate = null }) {
+          Text("Cancel")
+        }
+      }
+    )
+  }
+
+  // Sign Out Confirmation Dialog
+  if (showSignOutDialog) {
+    AlertDialog(
+      onDismissRequest = { showSignOutDialog = false },
+      title = { Text("Sign Out", fontWeight = FontWeight.Bold) },
+      text = {
+        Text(
+          if (userEmail.isNotBlank()) "Are you sure you want to sign out from $userEmail?"
+          else "Are you sure you want to sign out from NavGrade?"
+        )
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            showSignOutDialog = false
+            onSignOut?.invoke()
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+          Text("Sign Out")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showSignOutDialog = false }) {
           Text("Cancel")
         }
       }

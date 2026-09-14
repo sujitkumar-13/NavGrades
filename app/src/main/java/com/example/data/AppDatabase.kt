@@ -25,7 +25,7 @@ import org.json.JSONObject
     AnswerKeyItemEntity::class,
     ScannedPaperEntity::class
   ],
-  version = 4,
+  version = 5,
   exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

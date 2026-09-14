@@ -56,7 +56,9 @@ data class ScannedPaperEntity(
   val gender: String = "",
   val qualification: String = "",
   val questionSetName: String = "",
-  val scannedAt: Long = System.currentTimeMillis()
+  val scannedAt: Long = System.currentTimeMillis(),
+  val isSynced: Boolean = false,
+  val syncedAt: Long? = null
 )
 
 data class QuestionEvaluation(

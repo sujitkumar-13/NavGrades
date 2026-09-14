@@ -22,4 +22,12 @@ sealed class Screen(val route: String) {
   object PaperDetail : Screen("paper_detail/{paperId}") {
     fun createRoute(paperId: String) = "paper_detail/$paperId"
   }
+  object Login : Screen("login")
+  object PendingApproval : Screen("pending_approval/{email}/{name}") {
+    fun createRoute(email: String, name: String) = "pending_approval/$email/$name"
+  }
+  object AccessDenied : Screen("access_denied/{email}") {
+    fun createRoute(email: String) = "access_denied/$email"
+  }
+  object AdminPanel : Screen("admin_panel")
 }
