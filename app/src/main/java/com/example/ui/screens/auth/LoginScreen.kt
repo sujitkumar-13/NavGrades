@@ -300,7 +300,7 @@ fun LoginScreen(
               // 1. Admin Login
               OutlinedButton(
                 onClick = {
-                  authViewModel.processUserLogin("admin@navgurukul.org", "NavGrades Admin")
+                  authViewModel.processUserLogin("sujit@navgurukul.org", "Sujit Kumar")
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
@@ -310,7 +310,7 @@ fun LoginScreen(
                   horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                   Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = NavPrimary, modifier = Modifier.size(18.dp))
-                  Text("Login as Admin (admin@navgurukul.org)", fontSize = 13.sp, color = TextPrimaryLight)
+                  Text("Login as Admin (sujit@navgurukul.org)", fontSize = 13.sp, color = TextPrimaryLight)
                 }
               }
 

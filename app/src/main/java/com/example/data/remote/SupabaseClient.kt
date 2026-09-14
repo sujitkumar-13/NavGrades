@@ -7,17 +7,24 @@ import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 
+import com.example.BuildConfig
+
 object SupabaseConfig {
-  // TODO: Replace with your actual Supabase project URL and anon public key from https://supabase.com/dashboard/project/_/settings/api
-  const val SUPABASE_URL = "https://your-project.supabase.co"
-  const val SUPABASE_ANON_KEY = "your-anon-public-key"
+  val SUPABASE_URL: String = BuildConfig.SUPABASE_URL
+    .trim()
+    .replace(Regex("/rest/v1/?$"), "")
+    .trimEnd('/')
+
+  val SUPABASE_ANON_KEY: String = BuildConfig.SUPABASE_ANON_KEY.trim()
   const val IMAGES_BUCKET = "navgrade-images"
 
-  fun isConfigured(): Boolean {
-    return SUPABASE_URL.isNotBlank() &&
-      !SUPABASE_URL.contains("your-project") &&
-      SUPABASE_ANON_KEY.isNotBlank() &&
-      !SUPABASE_ANON_KEY.contains("your-anon-public-key")
+  fun isConfigured(url: String = SUPABASE_URL, key: String = SUPABASE_ANON_KEY): Boolean {
+    return url.isNotBlank() &&
+      !url.contains("your-project") &&
+      !url.contains("placeholder") &&
+      key.isNotBlank() &&
+      !key.contains("your-anon-public-key") &&
+      !key.contains("placeholder")
   }
 
   val client: SupabaseClient by lazy {

@@ -1,4 +1,21 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties().apply {
+  val localPropertiesFile = rootProject.file("local.properties")
+  if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { load(it) }
+  }
+}
+
+val supabaseUrl: String = localProperties.getProperty("supabase.url")
+  ?: System.getenv("SUPABASE_URL")
+  ?: "https://placeholder.supabase.co"
+
+val supabaseAnonKey: String = localProperties.getProperty("supabase.anon.key")
+  ?: System.getenv("SUPABASE_ANON_KEY")
+  ?: "placeholder-key"
 
 plugins {
   alias(libs.plugins.android.application)
@@ -22,6 +39,9 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+    buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
   }
 
   signingConfigs {

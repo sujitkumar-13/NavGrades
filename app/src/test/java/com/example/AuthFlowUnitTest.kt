@@ -33,8 +33,10 @@ class AuthFlowUnitTest {
 
   @Test
   fun testSupabaseConfigDetectsPlaceholder() {
-    // Should detect that placeholder is not a configured URL
-    assertFalse(SupabaseConfig.isConfigured())
+    // Verifies placeholder vs configured detection
+    assertFalse(SupabaseConfig.isConfigured("https://placeholder.supabase.co", "placeholder-key"))
+    assertFalse(SupabaseConfig.isConfigured("https://your-project.supabase.co", "your-anon-public-key"))
+    assertTrue(SupabaseConfig.isConfigured("https://vdfapipmnwoxluqrmhzm.supabase.co", "real-key-123"))
   }
 
   @Test
