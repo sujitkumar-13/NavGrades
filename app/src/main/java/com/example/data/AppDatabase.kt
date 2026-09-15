@@ -25,7 +25,7 @@ import org.json.JSONObject
     AnswerKeyItemEntity::class,
     ScannedPaperEntity::class
   ],
-  version = 4,
+  version = 5,
   exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
           AppDatabase::class.java,
           "omr_database_v2.db"
         )
-        .fallbackToDestructiveMigration()
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .addCallback(DatabaseCallback(scope))
         .build()
         INSTANCE = instance

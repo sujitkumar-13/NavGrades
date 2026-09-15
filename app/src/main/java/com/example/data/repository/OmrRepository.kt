@@ -561,6 +561,14 @@ class OmrRepository(
     }
   }
 
+  suspend fun getUnsyncedPapers(): List<ScannedPaperEntity> = withContext(Dispatchers.IO) {
+    scannedPaperDao.getUnsyncedPapers()
+  }
+
+  suspend fun markPaperSynced(id: String, syncedAt: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
+    scannedPaperDao.markPaperSynced(id, syncedAt)
+  }
+
   companion object {
     @Volatile
     private var INSTANCE: OmrRepository? = null

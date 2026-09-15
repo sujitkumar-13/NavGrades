@@ -11,7 +11,8 @@ import com.example.data.model.AnswerKeySetEntity
 import com.example.data.model.QuestionEvaluation
 import com.example.data.model.QuizEntity
 import com.example.data.model.ScannedPaperEntity
-import com.example.data.repository.OmrRepository
+import com.example.data.repository.SyncedNavGradeRepository
+import com.example.data.repository.SyncStatus
 import com.example.omr.OmrScanOutput
 import com.example.omr.OmrScannerEngine
 import com.example.omr.OmrSheetGenerator
@@ -23,7 +24,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class OmrViewModel(application: Application) : AndroidViewModel(application) {
-  private val repository = OmrRepository.getInstance(application, viewModelScope)
+  private val repository = SyncedNavGradeRepository.getInstance(application, viewModelScope)
+
+  val syncStatus: StateFlow<SyncStatus> = repository.syncStatus
+
+  fun triggerSync() {
+    repository.triggerSync(getApplication())
+  }
 
   val allQuizzes: StateFlow<List<QuizEntity>> = repository.allQuizzes
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

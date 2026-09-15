@@ -96,4 +96,10 @@ interface ScannedPaperDao {
 
   @Query("DELETE FROM scanned_papers WHERE quizId = :quizId")
   suspend fun deletePapersForQuiz(quizId: String)
+
+  @Query("SELECT * FROM scanned_papers WHERE isSynced = 0")
+  suspend fun getUnsyncedPapers(): List<ScannedPaperEntity>
+
+  @Query("UPDATE scanned_papers SET isSynced = 1, syncedAt = :syncedAt WHERE id = :id")
+  suspend fun markPaperSynced(id: String, syncedAt: Long = System.currentTimeMillis())
 }

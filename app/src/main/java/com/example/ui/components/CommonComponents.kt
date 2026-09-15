@@ -16,9 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -70,7 +70,7 @@ fun StatusBadge(
       MaterialTheme.colorScheme.surfaceVariant,
       MaterialTheme.colorScheme.onSurfaceVariant,
       "Blank",
-      Icons.Default.HelpOutline
+      Icons.AutoMirrored.Filled.HelpOutline
     )
     EvaluationStatus.MULTIPLE -> Quadruple(
       MultiplePurpleContainer,
