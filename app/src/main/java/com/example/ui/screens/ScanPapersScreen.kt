@@ -93,8 +93,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.StrokeCap
 import com.example.data.model.ScannedPaperEntity
 import com.example.omr.CornerAlignmentState
+import com.example.omr.OmrLayoutDefinition
 import com.example.omr.OmrScannerEngine
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.SuccessGreenContainer
@@ -102,6 +104,12 @@ import com.example.ui.theme.WarningAmber
 import com.example.ui.theme.WarningAmberContainer
 import com.example.ui.viewmodel.OmrViewModel
 import java.util.concurrent.Executors
+
+private fun rotateBitmapIfNeeded(bitmap: Bitmap, degrees: Int): Bitmap {
+  if (degrees == 0) return bitmap
+  val matrix = android.graphics.Matrix().apply { postRotate(degrees.toFloat()) }
+  return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,6 +152,9 @@ fun ScanPapersScreen(
   var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
   var showDemoFeederDialog by remember { mutableStateOf(false) }
   var cornerAlignment by remember { mutableStateOf(CornerAlignmentState()) }
+  var stableFrameCount by remember { mutableStateOf(0) }
+  var previousAlignment by remember { mutableStateOf<CornerAlignmentState?>(null) }
+  var scanStatusMessage by remember { mutableStateOf("Align squares in viewfinders") }
   var lastCaptureTimestamp by remember { mutableStateOf(0L) }
   var lastAnalysisTimestamp by remember { mutableStateOf(0L) }
 
@@ -158,6 +169,9 @@ fun ScanPapersScreen(
     viewModel.loadQuiz(quizId)
     viewModel.clearScanResult()
     cornerAlignment = CornerAlignmentState()
+    stableFrameCount = 0
+    previousAlignment = null
+    scanStatusMessage = "Align squares in viewfinders"
     if (!hasCameraPermission) {
       permissionLauncher.launch(Manifest.permission.CAMERA)
     }
@@ -250,16 +264,46 @@ fun ScanPapersScreen(
                 imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                   try {
                     val now = System.currentTimeMillis()
-                    if (!isScanning && lastPaper == null && (now - lastAnalysisTimestamp > 160L)) {
+                    if (!isScanning && lastPaper == null && (now - lastAnalysisTimestamp > 140L)) {
                       lastAnalysisTimestamp = now
-                      val bmp = imageProxy.toBitmap()
-                      if (bmp != null) {
+                      val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                      val rawBmp = imageProxy.toBitmap()
+                      if (rawBmp != null) {
+                        val bmp = rotateBitmapIfNeeded(rawBmp, rotationDegrees)
                         val alignment = OmrScannerEngine.detectCornerAlignment(bmp)
                         cornerAlignment = alignment
 
-                        if (alignment.allAligned && !isScanning && lastPaper == null && (now - lastCaptureTimestamp > 2400L)) {
-                          lastCaptureTimestamp = now
-                          viewModel.processScannedBitmap(bmp) {}
+                        if (alignment.isReadyForCapture) {
+                          val prev = previousAlignment
+                          val isSteady = prev != null && alignment.isCloseTo(prev, maxDrift = 0.035f)
+                          if (isSteady) {
+                            stableFrameCount++
+                          } else {
+                            stableFrameCount = 1
+                          }
+                          previousAlignment = alignment
+
+                          scanStatusMessage = if (stableFrameCount >= 3) {
+                            "Hold steady... Scanning!"
+                          } else {
+                            "Hold steady..."
+                          }
+
+                          if (stableFrameCount >= 4 && !isScanning && lastPaper == null && (now - lastCaptureTimestamp > 2200L)) {
+                            lastCaptureTimestamp = now
+                            stableFrameCount = 0
+                            previousAlignment = null
+                            scanStatusMessage = "Processing OMR..."
+                            viewModel.processScannedBitmap(bmp) {}
+                          }
+                        } else {
+                          stableFrameCount = 0
+                          previousAlignment = null
+                          scanStatusMessage = when (alignment.count) {
+                            0 -> "Align squares in viewfinders"
+                            1, 2, 3 -> "${alignment.count} of 4 corners locked"
+                            else -> "Hold sheet flat inside viewfinder"
+                          }
                         }
                       }
                     }
@@ -295,95 +339,133 @@ fun ScanPapersScreen(
             val canvasW = size.width
             val canvasH = size.height
 
-            val sheetW = canvasW * 0.88f
-            val sheetH = sheetW * 1.414f // A4 proportion
-            val finalSheetH = if (sheetH > canvasH * 0.76f) canvasH * 0.76f else sheetH
-            val finalSheetW = finalSheetH / 1.414f
+            // Maximize scanning viewfinder to cover almost the entire usable camera screen
+            val targetRatio = 1.46f // Standard OMR / A4 sheet proportion
+            val maxUsableW = canvasW * 0.95f // Covers 95% of screen width
+            val bottomReserved = 96.dp.toPx() // Room for floating status bar at bottom
+            val maxUsableH = canvasH - bottomReserved
+
+            var finalSheetW = maxUsableW
+            var finalSheetH = finalSheetW * targetRatio
+
+            if (finalSheetH > maxUsableH) {
+              finalSheetH = maxUsableH
+              finalSheetW = finalSheetH / targetRatio
+            }
 
             val left = (canvasW - finalSheetW) / 2f
-            val top = (canvasH - finalSheetH) / 2.6f
+            val top = ((maxUsableH - finalSheetH) / 2f + 8.dp.toPx()).coerceAtLeast(16.dp.toPx())
             val right = left + finalSheetW
             val bottom = top + finalSheetH
 
             // 1. Semi-transparent scrim outside sheet area
             val scrimColor = Color(0x55000000)
-            // Top scrim
             drawRect(color = scrimColor, topLeft = Offset(0f, 0f), size = Size(canvasW, top))
-            // Bottom scrim
             drawRect(color = scrimColor, topLeft = Offset(0f, bottom), size = Size(canvasW, canvasH - bottom))
-            // Left scrim
             drawRect(color = scrimColor, topLeft = Offset(0f, top), size = Size(left, finalSheetH))
-            // Right scrim
             drawRect(color = scrimColor, topLeft = Offset(right, top), size = Size(canvasW - right, finalSheetH))
 
-            // 2. 4 Corner Viewfinder shaded target boxes
-            val cornerBoxW = finalSheetW * 0.20f
-            val cornerBoxH = finalSheetW * 0.20f
-            val cornerShade = Color(0x33FFFFFF) // Lighter shaded viewfinder region
+            // 2. Viewfinder boundary outline
+            val isLockedAndSteady = cornerAlignment.isReadyForCapture && stableFrameCount >= 2
+            val frameColor = if (isLockedAndSteady) Color(0xFF00E676)
+                             else if (cornerAlignment.isReadyForCapture) Color(0xFF00E676)
+                             else if (cornerAlignment.count > 0) Color(0xFFFFB300)
+                             else Color(0x77FFFFFF)
+            drawRoundRect(
+              color = frameColor,
+              topLeft = Offset(left, top),
+              size = Size(finalSheetW, finalSheetH),
+              cornerRadius = CornerRadius(14f, 14f),
+              style = Stroke(width = if (isLockedAndSteady) 4f else if (cornerAlignment.count > 0) 3f else 2f)
+            )
 
-            // Top-Left Viewfinder Box
-            drawRect(color = cornerShade, topLeft = Offset(left, top), size = Size(cornerBoxW, cornerBoxH))
-            // Top-Right Viewfinder Box
-            drawRect(color = cornerShade, topLeft = Offset(right - cornerBoxW, top), size = Size(cornerBoxW, cornerBoxH))
-            // Bottom-Left Viewfinder Box
-            drawRect(color = cornerShade, topLeft = Offset(left, bottom - cornerBoxH), size = Size(cornerBoxW, cornerBoxH))
-            // Bottom-Right Viewfinder Box
-            drawRect(color = cornerShade, topLeft = Offset(right - cornerBoxW, bottom - cornerBoxH), size = Size(cornerBoxW, cornerBoxH))
+            // 3. Corner L-bracket reticle guides at sheet perimeter
+            val bracketLen = (finalSheetW * 0.08f).coerceAtLeast(24.dp.toPx())
+            val bracketStroke = Stroke(width = if (isLockedAndSteady) 5f else 4f, cap = StrokeCap.Round)
+            val bracketColor = if (isLockedAndSteady) Color(0xFF00E676)
+                               else if (cornerAlignment.count > 0) Color(0xFFFFB300)
+                               else Color.White
 
-            // 3. Highlighted Green Boxes on each individually aligned corner
+            // Top-Left L
+            drawLine(bracketColor, Offset(left, top), Offset(left + bracketLen, top), bracketStroke.width)
+            drawLine(bracketColor, Offset(left, top), Offset(left, top + bracketLen), bracketStroke.width)
+            // Top-Right L
+            drawLine(bracketColor, Offset(right, top), Offset(right - bracketLen, top), bracketStroke.width)
+            drawLine(bracketColor, Offset(right, top), Offset(right, top + bracketLen), bracketStroke.width)
+            // Bottom-Left L
+            drawLine(bracketColor, Offset(left, bottom), Offset(left + bracketLen, bottom), bracketStroke.width)
+            drawLine(bracketColor, Offset(left, bottom), Offset(left, bottom - bracketLen), bracketStroke.width)
+            // Bottom-Right L
+            drawLine(bracketColor, Offset(right, bottom), Offset(right - bracketLen, bottom), bracketStroke.width)
+            drawLine(bracketColor, Offset(right, bottom), Offset(right, bottom - bracketLen), bracketStroke.width)
+
+            // 4. 4 Corner Fiducial Target Markers
             val cornerBoxSize = finalSheetW * 0.085f
             val halfBox = cornerBoxSize / 2f
             val innerBlackSize = cornerBoxSize * 0.55f
             val halfInner = innerBlackSize / 2f
 
-            val tlCenterX = left + (finalSheetW * 0.065f)
-            val tlCenterY = top + (finalSheetH * 0.055f)
+            val tlCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_TL_X)
+            val tlCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_TL_Y)
 
-            val trCenterX = right - (finalSheetW * 0.065f)
-            val trCenterY = top + (finalSheetH * 0.055f)
+            val trCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_TR_X)
+            val trCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_TR_Y)
 
-            val blCenterX = left + (finalSheetW * 0.065f)
-            val blCenterY = bottom - (finalSheetH * 0.055f)
+            val blCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_BL_X)
+            val blCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_BL_Y)
 
-            val brCenterX = right - (finalSheetW * 0.065f)
-            val brCenterY = bottom - (finalSheetH * 0.055f)
+            val brCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_BR_X)
+            val brCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_BR_Y)
 
             val vibrantGreen = Color(0xFF00E676)
             val greenBorder = Color(0xFF00C853)
+            val guideTargetColor = Color(0x66FFFFFF)
 
-            val cornersToHighlight = mutableListOf<Offset>()
-            if (cornerAlignment.tl || lastPaper != null || isScanning) {
-              cornersToHighlight.add(Offset(tlCenterX, tlCenterY))
-            }
-            if (cornerAlignment.tr || lastPaper != null || isScanning) {
-              cornersToHighlight.add(Offset(trCenterX, trCenterY))
-            }
-            if (cornerAlignment.bl || lastPaper != null || isScanning) {
-              cornersToHighlight.add(Offset(blCenterX, blCenterY))
-            }
-            if (cornerAlignment.br || lastPaper != null || isScanning) {
-              cornersToHighlight.add(Offset(brCenterX, brCenterY))
-            }
+            val allCorners = listOf(
+              Triple(Offset(tlCenterX, tlCenterY), cornerAlignment.tl || lastPaper != null || isScanning, "TL"),
+              Triple(Offset(trCenterX, trCenterY), cornerAlignment.tr || lastPaper != null || isScanning, "TR"),
+              Triple(Offset(blCenterX, blCenterY), cornerAlignment.bl || lastPaper != null || isScanning, "BL"),
+              Triple(Offset(brCenterX, brCenterY), cornerAlignment.br || lastPaper != null || isScanning, "BR")
+            )
 
-            cornersToHighlight.forEach { center ->
-              // Outer vibrant green square box
-              drawRect(
-                color = vibrantGreen,
-                topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                size = Size(cornerBoxSize, cornerBoxSize)
-              )
-              drawRect(
-                color = greenBorder,
-                topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                size = Size(cornerBoxSize, cornerBoxSize),
-                style = Stroke(width = 2.5f)
-              )
-              // Inner black fiducial center
-              drawRect(
-                color = Color.Black,
-                topLeft = Offset(center.x - halfInner, center.y - halfInner),
-                size = Size(innerBlackSize, innerBlackSize)
-              )
+            allCorners.forEach { (center, isAligned, _) ->
+              if (isAligned) {
+                // Aligned state: vibrant green box with dark fiducial core
+                drawRect(
+                  color = vibrantGreen,
+                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
+                  size = Size(cornerBoxSize, cornerBoxSize)
+                )
+                drawRect(
+                  color = greenBorder,
+                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
+                  size = Size(cornerBoxSize, cornerBoxSize),
+                  style = Stroke(width = 2.5f)
+                )
+                drawRect(
+                  color = Color.Black,
+                  topLeft = Offset(center.x - halfInner, center.y - halfInner),
+                  size = Size(innerBlackSize, innerBlackSize)
+                )
+              } else {
+                // Unaligned state: subtle target frame guide indicating where to align marker
+                drawRect(
+                  color = Color(0x18FFFFFF),
+                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
+                  size = Size(cornerBoxSize, cornerBoxSize)
+                )
+                drawRect(
+                  color = guideTargetColor,
+                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
+                  size = Size(cornerBoxSize, cornerBoxSize),
+                  style = Stroke(width = 1.5f)
+                )
+                drawCircle(
+                  color = Color(0x88FFFFFF),
+                  radius = 3.dp.toPx(),
+                  center = center
+                )
+              }
             }
           }
 
@@ -412,10 +494,10 @@ fun ScanPapersScreen(
                     modifier = Modifier.weight(1f)
                   ) {
                     Text(
-                      text = if (cornerAlignment.count == 0) "Align squares in viewfinders"
-                             else if (cornerAlignment.count == 4) "All 4 aligned - Scanning..."
-                             else "${cornerAlignment.count} of 4 corners locked",
-                      color = if (cornerAlignment.count == 4) Color(0xFF00E676) else Color.White,
+                      text = scanStatusMessage,
+                      color = if (cornerAlignment.isReadyForCapture && stableFrameCount >= 2) Color(0xFF00E676)
+                              else if (cornerAlignment.count > 0) Color(0xFFFFB300)
+                              else Color.White,
                       fontSize = 14.sp,
                       fontWeight = FontWeight.SemiBold,
                       textAlign = TextAlign.Center
@@ -440,12 +522,14 @@ fun ScanPapersScreen(
                           executor,
                           object : ImageCapture.OnImageCapturedCallback() {
                             override fun onCaptureSuccess(image: ImageProxy) {
+                              val rotationDegrees = image.imageInfo.rotationDegrees
                               val buffer = image.planes[0].buffer
                               val bytes = ByteArray(buffer.remaining())
                               buffer.get(bytes)
-                              val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                              val rawBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                               image.close()
-                              if (bitmap != null) {
+                              if (rawBitmap != null) {
+                                val bitmap = rotateBitmapIfNeeded(rawBitmap, rotationDegrees)
                                 viewModel.processScannedBitmap(bitmap) {}
                               }
                             }
@@ -641,7 +725,40 @@ fun ScanPapersScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                   ) {
                     Text("Student Name:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    Text(paper.studentName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    val displayName = listOf(paper.firstName, paper.lastName)
+                      .filter { it.isNotBlank() }
+                      .joinToString(" ")
+                      .trim()
+                      .ifBlank { paper.studentName }
+                    Text(displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                  }
+                  val phoneDisplay = paper.phoneNumber.ifBlank { paper.whatsappNumber }
+                  if (phoneDisplay.isNotBlank()) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                      Text("Phone:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                      Text(phoneDisplay, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
+                  }
+                  if (paper.questionSetName.isNotBlank()) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                      Text("Question Set:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                      Text(paper.questionSetName, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                    }
+                  }
+                  if (paper.cast.isNotBlank()) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                      Text("Caste:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                      Text(paper.cast, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
                   }
                   Row(
                     modifier = Modifier.fillMaxWidth(),

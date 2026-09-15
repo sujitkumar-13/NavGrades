@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Layers
@@ -68,14 +66,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.EvaluationStatus
-import com.example.data.model.QuestionEvaluation
-import com.example.ui.components.OptionBubble
-import com.example.ui.components.StatusBadge
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.ErrorRedContainer
-import com.example.ui.theme.MultiplePurple
-import com.example.ui.theme.MultiplePurpleContainer
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.SuccessGreenContainer
 import com.example.ui.theme.WarningAmber
@@ -93,10 +85,8 @@ fun PaperDetailScreen(
   val context = LocalContext.current
   val paper by viewModel.selectedPaper.collectAsState()
   val quiz by viewModel.selectedQuiz.collectAsState()
-  val evaluations by viewModel.paperEvaluations.collectAsState()
 
   var showDeleteDialog by remember { mutableStateOf(false) }
-  var editingQuestion by remember { mutableStateOf<QuestionEvaluation?>(null) }
   var showImageModal by remember { mutableStateOf(false) }
 
   LaunchedEffect(paperId) {
@@ -187,8 +177,14 @@ fun PaperDetailScreen(
                 verticalAlignment = Alignment.Top
               ) {
                 Column(modifier = Modifier.weight(1f)) {
+                  val fullName = listOf(currentPaper.firstName, currentPaper.lastName)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                    .trim()
+                    .ifBlank { currentPaper.studentName }
+
                   Text(
-                    text = currentPaper.studentName,
+                    text = fullName,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -196,7 +192,7 @@ fun PaperDetailScreen(
                   if (currentQuiz != null) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                      text = "Quiz: ${currentQuiz.name} (${currentQuiz.date})",
+                      text = "Date: ${currentQuiz.date}",
                       style = MaterialTheme.typography.bodySmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -370,6 +366,50 @@ fun PaperDetailScreen(
           }
         }
 
+        // Student Profile Details Card
+        item {
+          Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+              containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("student_profile_card")
+          ) {
+            Column(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+              verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              Text(
+                text = "Student Profile",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+              )
+
+              val firstNameDisplay = currentPaper.firstName.ifBlank { "—" }
+              val lastNameDisplay = currentPaper.lastName.ifBlank { "—" }
+              val phoneDisplay = currentPaper.phoneNumber.ifBlank { currentPaper.whatsappNumber }
+              val whatsappDisplay = currentPaper.whatsappNumber.ifBlank { currentPaper.phoneNumber }
+
+              ProfileDetailRow(label = "First Name", value = firstNameDisplay)
+              ProfileDetailRow(label = "Last Name", value = lastNameDisplay)
+              ProfileDetailRow(label = "Phone Number", value = phoneDisplay)
+              ProfileDetailRow(label = "WhatsApp Number", value = whatsappDisplay)
+              ProfileDetailRow(label = "City / Village", value = currentPaper.block)
+              ProfileDetailRow(label = "Caste", value = currentPaper.cast)
+              ProfileDetailRow(label = "Gender", value = currentPaper.gender)
+              ProfileDetailRow(label = "Current Qualification", value = currentPaper.qualification)
+              ProfileDetailRow(label = "School / College", value = currentPaper.school)
+              ProfileDetailRow(label = "Question Set", value = currentPaper.questionSetName)
+            }
+          }
+        }
+
         // Scanned OMR Sheet Image Section (Embedded directly on screen)
         item {
           Card(
@@ -477,97 +517,6 @@ fun PaperDetailScreen(
     }
   }
 
-  // Manual Correction Bottom Sheet / Dialog
-  editingQuestion?.let { item ->
-    var chosenAnswer by remember { mutableStateOf(item.studentAnswer) }
-
-    AlertDialog(
-      onDismissRequest = { editingQuestion = null },
-      title = {
-        Text("Manual Correction - Q${item.questionNumber}")
-      },
-      text = {
-        Column(
-          verticalArrangement = Arrangement.spacedBy(14.dp),
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Text(
-            text = "Detected Student Answer: ${item.studentAnswer}   |   Correct Key: ${item.correctAnswer}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-
-          Text(
-            text = "Select corrected student answer:",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-          )
-
-          // Bubble row for A, B, C, D
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-          ) {
-            listOf("A", "B", "C", "D").forEach { opt ->
-              OptionBubble(
-                text = opt,
-                isSelected = chosenAnswer == opt,
-                onClick = { chosenAnswer = opt },
-                size = 44.dp,
-                modifier = Modifier.testTag("dialog_bubble_$opt")
-              )
-            }
-          }
-
-          // Extra options: Blank & Multiple
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            OutlinedButton(
-              onClick = { chosenAnswer = "BLANK" },
-              modifier = Modifier.weight(1f),
-              shape = RoundedCornerShape(8.dp),
-              colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = if (chosenAnswer == "BLANK") MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-              )
-            ) {
-              Text("Mark Blank")
-            }
-            OutlinedButton(
-              onClick = { chosenAnswer = "MULTIPLE" },
-              modifier = Modifier.weight(1f),
-              shape = RoundedCornerShape(8.dp),
-              colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = if (chosenAnswer == "MULTIPLE") MultiplePurpleContainer else Color.Transparent
-              )
-            ) {
-              Text("Multiple")
-            }
-          }
-        }
-      },
-      confirmButton = {
-        Button(
-          onClick = {
-            viewModel.updateStudentAnswer(paperId, item.questionNumber, chosenAnswer)
-            editingQuestion = null
-            Toast.makeText(context, "Question ${item.questionNumber} updated & score recalculated!", Toast.LENGTH_SHORT).show()
-          },
-          shape = RoundedCornerShape(10.dp),
-          modifier = Modifier.testTag("save_correction_button")
-        ) {
-          Text("Save Correction", fontWeight = FontWeight.Bold)
-        }
-      },
-      dismissButton = {
-        TextButton(onClick = { editingQuestion = null }) {
-          Text("Cancel")
-        }
-      }
-    )
-  }
-
   // Scanned Image Viewer Dialog
   if (showImageModal && paper?.imagePath != null) {
     val file = File(paper!!.imagePath!!)
@@ -644,91 +593,29 @@ fun PaperDetailScreen(
   }
 }
 
+
 @Composable
-fun QuestionEvaluationCard(
-  evaluation: QuestionEvaluation,
-  onClick: () -> Unit,
+fun ProfileDetailRow(
+  label: String,
+  value: String,
   modifier: Modifier = Modifier
 ) {
-  Card(
-    modifier = modifier
-      .fillMaxWidth()
-      .clickable { onClick() }
-      .testTag("evaluation_card_${evaluation.questionNumber}"),
-    shape = RoundedCornerShape(12.dp),
-    colors = CardDefaults.cardColors(
-      containerColor = MaterialTheme.colorScheme.surface
-    ),
-    elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
+  Row(
+    modifier = modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 14.dp, vertical = 12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-      // Question Number
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-      ) {
-        Box(
-          modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
-          contentAlignment = Alignment.Center
-        ) {
-          Text(
-            text = "Q${evaluation.questionNumber}",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-          )
-        }
-
-        Column {
-          Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = "Student: ${evaluation.studentAnswer}",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Bold,
-              color = when (evaluation.status) {
-                EvaluationStatus.CORRECT -> SuccessGreen
-                EvaluationStatus.WRONG -> ErrorRed
-                EvaluationStatus.REVIEW_REQUIRED -> WarningAmber
-                EvaluationStatus.MULTIPLE -> MultiplePurple
-                EvaluationStatus.BLANK -> MaterialTheme.colorScheme.onSurfaceVariant
-              }
-            )
-
-            Text(
-              text = "Key: ${evaluation.correctAnswer}",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-        }
-      }
-
-      // Status Badge and Edit pencil
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        StatusBadge(status = evaluation.status)
-
-        Icon(
-          imageVector = Icons.Default.Edit,
-          contentDescription = "Edit answer",
-          tint = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.size(16.dp)
-        )
-      }
-    }
+    Text(
+      text = label,
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Text(
+      text = value.ifBlank { "—" },
+      style = MaterialTheme.typography.bodyMedium,
+      fontWeight = FontWeight.SemiBold,
+      color = MaterialTheme.colorScheme.onSurface
+    )
   }
 }
+

@@ -289,12 +289,17 @@ class OmrRepository(
     studentName: String,
     rawAnswers: Map<Int, String>,
     imagePath: String?,
+    firstName: String = "",
+    lastName: String = "",
+    phoneNumber: String = "",
     whatsappNumber: String = "",
+    school: String = "",
     block: String = "",
     cast: String = "",
     gender: String = "",
     qualification: String = "",
-    questionSetName: String = ""
+    questionSetName: String = "",
+    courseCode: String = ""
   ): ScannedPaperEntity = withContext(Dispatchers.IO) {
     val answerKeys = getAnswerKeysForQuizDirect(quizId).associateBy { it.questionIndex }
     val quiz = quizDao.getQuizById(quizId)
@@ -347,7 +352,18 @@ class OmrRepository(
       id = UUID.randomUUID().toString(),
       quizId = quizId,
       studentId = studentId.ifBlank { "NG-" + (10000 + (1..8999).random()) },
+      firstName = firstName,
+      lastName = lastName,
       studentName = studentName.ifBlank { "Student" },
+      phoneNumber = phoneNumber,
+      whatsappNumber = whatsappNumber,
+      school = school,
+      block = block,
+      cast = cast,
+      gender = gender,
+      qualification = qualification,
+      questionSetName = questionSetName,
+      courseCode = courseCode,
       answersJson = answersJson.toString(),
       score = totalScore,
       totalPossibleMarks = totalPossibleMarks,
@@ -358,12 +374,6 @@ class OmrRepository(
       multipleCount = multipleCount,
       reviewRequiredCount = reviewReqCount,
       imagePath = imagePath,
-      whatsappNumber = whatsappNumber,
-      block = block,
-      cast = cast,
-      gender = gender,
-      qualification = qualification,
-      questionSetName = questionSetName,
       scannedAt = System.currentTimeMillis()
     )
 

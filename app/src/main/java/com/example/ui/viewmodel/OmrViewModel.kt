@@ -232,12 +232,17 @@ class OmrViewModel(application: Application) : AndroidViewModel(application) {
           studentName = scanOutput.studentName,
           rawAnswers = scanOutput.detectedAnswers,
           imagePath = imagePath,
+          firstName = scanOutput.firstName,
+          lastName = scanOutput.lastName,
+          phoneNumber = scanOutput.phoneNumber,
           whatsappNumber = scanOutput.whatsappNumber,
+          school = scanOutput.school,
           block = scanOutput.block,
           cast = scanOutput.cast,
           gender = scanOutput.gender,
           qualification = scanOutput.qualification,
-          questionSetName = scanOutput.questionSetName
+          questionSetName = scanOutput.questionSetName,
+          courseCode = scanOutput.courseCode
         )
 
         _lastScannedPaper.value = savedPaper

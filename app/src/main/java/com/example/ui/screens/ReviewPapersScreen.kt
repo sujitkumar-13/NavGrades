@@ -62,6 +62,11 @@ import com.example.ui.theme.WarningAmber
 import com.example.ui.theme.WarningAmberContainer
 import com.example.ui.viewmodel.OmrViewModel
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewPapersScreen(
@@ -74,20 +79,34 @@ fun ReviewPapersScreen(
   val quiz by viewModel.selectedQuiz.collectAsState()
   val papers by viewModel.papers.collectAsState()
   var searchQuery by remember { mutableStateOf("") }
+  var selectedFilter by remember { mutableStateOf("All") }
 
   LaunchedEffect(quizId) {
     viewModel.loadQuiz(quizId)
   }
 
   val filteredPapers = papers.filter { paper ->
-    if (searchQuery.isBlank()) true
-    else paper.studentName.contains(searchQuery, ignoreCase = true) ||
-         paper.studentId.contains(searchQuery, ignoreCase = true)
+    val matchesSearch = if (searchQuery.isBlank()) true
+      else paper.studentName.contains(searchQuery, ignoreCase = true) ||
+           paper.studentId.contains(searchQuery, ignoreCase = true) ||
+           paper.phoneNumber.contains(searchQuery) ||
+           paper.block.contains(searchQuery, ignoreCase = true)
+
+    val matchesFilter = when (selectedFilter) {
+      "Set A" -> paper.questionSetName.contains("A", ignoreCase = true)
+      "Set B" -> paper.questionSetName.contains("B", ignoreCase = true)
+      "Review Required" -> paper.reviewRequiredCount > 0
+      "≥60%" -> paper.percentage >= 60f
+      "<60%" -> paper.percentage < 60f
+      else -> true
+    }
+
+    matchesSearch && matchesFilter
   }
 
-  val avgScore = if (papers.isNotEmpty()) papers.map { it.score }.average().toFloat() else 0f
   val avgPercentage = if (papers.isNotEmpty()) papers.map { it.percentage }.average().toFloat() else 0f
-  val reviewNeededCount = papers.count { it.reviewRequiredCount > 0 }
+  val setACount = papers.count { it.questionSetName.contains("A", ignoreCase = true) }
+  val setBCount = papers.count { it.questionSetName.contains("B", ignoreCase = true) }
 
   Scaffold(
     topBar = {
@@ -100,7 +119,7 @@ fun ReviewPapersScreen(
               fontWeight = FontWeight.Bold
             )
             Text(
-              text = "${quiz?.name ?: ""}  •  ${papers.size} Papers",
+              text = "${quiz?.date ?: ""}  •  ${papers.size} Papers",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -191,7 +210,7 @@ fun ReviewPapersScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
-        // Summary Metrics Bar
+        // Summary Metrics Bar: Total Papers | Avg % | Set A | Set B
         item {
           Card(
             shape = RoundedCornerShape(16.dp),
@@ -231,13 +250,13 @@ fun ReviewPapersScreen(
 
               Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                  text = "${"%.1f".format(avgScore)} / ${quiz?.numQuestions ?: 32}",
+                  text = "${"%.1f".format(avgPercentage)}%",
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.Bold,
                   color = SuccessGreen
                 )
                 Text(
-                  text = "Avg Score (${"%.0f".format(avgPercentage)}%)",
+                  text = "Avg %",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -252,13 +271,34 @@ fun ReviewPapersScreen(
 
               Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                  text = "$reviewNeededCount",
+                  text = "$setACount",
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.Bold,
-                  color = if (reviewNeededCount > 0) WarningAmber else MaterialTheme.colorScheme.onSurfaceVariant
+                  color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                  text = "Review Req",
+                  text = "Set A",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+
+              Box(
+                modifier = Modifier
+                  .height(36.dp)
+                  .width(1.dp)
+                  .background(MaterialTheme.colorScheme.outlineVariant)
+              )
+
+              Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                  text = "$setBCount",
+                  style = MaterialTheme.typography.titleLarge,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Set B",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -272,7 +312,7 @@ fun ReviewPapersScreen(
           OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Search by Student Name...") },
+            placeholder = { Text("Search by Student Name, Phone, City...") },
             leadingIcon = {
               Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             },
@@ -293,6 +333,29 @@ fun ReviewPapersScreen(
               unfocusedBorderColor = MaterialTheme.colorScheme.outline
             )
           )
+        }
+
+        // Filter Chips Row
+        item {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            listOf("All", "Set A", "Set B", "Review Required", "≥60%", "<60%").forEach { filter ->
+              FilterChip(
+                selected = selectedFilter == filter,
+                onClick = { selectedFilter = filter },
+                label = { Text(filter, fontSize = 13.sp) },
+                shape = RoundedCornerShape(20.dp),
+                colors = FilterChipDefaults.filterChipColors(
+                  selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                  selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+              )
+            }
+          }
         }
 
         // Paper Items
@@ -374,6 +437,31 @@ fun ScannedPaperCard(
               }
             }
           }
+        }
+
+        // Second Row: City • Set • Caste
+        val details = listOfNotNull(
+          paper.block.takeIf { it.isNotBlank() }?.let { "📍 $it" },
+          paper.questionSetName.takeIf { it.isNotBlank() },
+          paper.cast.takeIf { it.isNotBlank() }
+        ).joinToString("  •  ")
+
+        if (details.isNotBlank()) {
+          Text(
+            text = details,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+
+        // Third Row: Phone
+        val phone = paper.phoneNumber.ifBlank { paper.whatsappNumber }
+        if (phone.isNotBlank()) {
+          Text(
+            text = "📞 $phone",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+          )
         }
       }
 

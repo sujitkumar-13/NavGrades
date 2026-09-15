@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import androidx.room.migration.Migration
 
 @Database(
   entities = [
@@ -25,7 +26,7 @@ import org.json.JSONObject
     AnswerKeyItemEntity::class,
     ScannedPaperEntity::class
   ],
-  version = 5,
+  version = 6,
   exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +39,16 @@ abstract class AppDatabase : RoomDatabase() {
     @Volatile
     private var INSTANCE: AppDatabase? = null
 
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+      override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE scanned_papers ADD COLUMN firstName TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE scanned_papers ADD COLUMN lastName TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE scanned_papers ADD COLUMN phoneNumber TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE scanned_papers ADD COLUMN school TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE scanned_papers ADD COLUMN courseCode TEXT NOT NULL DEFAULT ''")
+      }
+    }
+
     fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
       return INSTANCE ?: synchronized(this) {
         val instance = Room.databaseBuilder(
@@ -45,6 +56,7 @@ abstract class AppDatabase : RoomDatabase() {
           AppDatabase::class.java,
           "omr_database_v2.db"
         )
+        .addMigrations(MIGRATION_5_6)
         .fallbackToDestructiveMigration(dropAllTables = true)
         .addCallback(DatabaseCallback(scope))
         .build()
@@ -144,7 +156,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-rahul-001",
           quizId = quiz1Id,
           studentId = "NG12345",
+          firstName = "Rahul",
+          lastName = "Kumar",
           studentName = "Rahul Kumar",
+          phoneNumber = "9876543210",
+          whatsappNumber = "9876543210",
+          school = "Govt HSS Sukma",
+          block = "Sukma",
+          cast = "General",
+          gender = "Male",
+          qualification = "12th Pass",
+          questionSetName = "Set - A",
+          courseCode = "SOB",
           answersJson = rahulAnswers.toString(),
           score = 12.0f,
           totalPossibleMarks = 16.0f,
@@ -154,12 +177,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "9876543210",
-          block = "Sukma",
-          cast = "General",
-          gender = "Male",
-          qualification = "12th Pass",
-          questionSetName = "Set - A",
           scannedAt = System.currentTimeMillis() - 3600000L
         )
       )
@@ -178,7 +195,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-priya-002",
           quizId = quiz1Id,
           studentId = "NG20261",
+          firstName = "Priya",
+          lastName = "Sharma",
           studentName = "Priya Sharma",
+          phoneNumber = "9340386750",
+          whatsappNumber = "9340386750",
+          school = "Govt College Beicha",
+          block = "Beicha",
+          cast = "OBC",
+          gender = "Female",
+          qualification = "B.A III",
+          questionSetName = "Set - A",
+          courseCode = "SOB",
           answersJson = priyaAnswers.toString(),
           score = 15.0f,
           totalPossibleMarks = 16.0f,
@@ -188,12 +216,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "9340386750",
-          block = "Beicha",
-          cast = "OBC",
-          gender = "Female",
-          qualification = "B.A III",
-          questionSetName = "Set - A",
           scannedAt = System.currentTimeMillis() - 1800000L
         )
       )
@@ -208,7 +230,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-pooja-003",
           quizId = quiz1Id,
           studentId = "NG56780",
+          firstName = "Pooja",
+          lastName = "Yadav",
           studentName = "Pooja Yadav",
+          phoneNumber = "9123456780",
+          whatsappNumber = "9123456780",
+          school = "Model School Sukma",
+          block = "Sukma",
+          cast = "OBC",
+          gender = "Female",
+          qualification = "12th Pass",
+          questionSetName = "Set - A",
+          courseCode = "SOB",
           answersJson = poojaAnswers.toString(),
           score = 16.0f,
           totalPossibleMarks = 16.0f,
@@ -218,12 +251,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "9123456780",
-          block = "Sukma",
-          cast = "OBC",
-          gender = "Female",
-          qualification = "12th Pass",
-          questionSetName = "Set - A",
           scannedAt = System.currentTimeMillis() - 1200000L
         )
       )
@@ -242,7 +269,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-amit-004",
           quizId = quiz1Id,
           studentId = "NG55544",
+          firstName = "Amit",
+          lastName = "Netam",
           studentName = "Amit Netam",
+          phoneNumber = "8877665544",
+          whatsappNumber = "8877665544",
+          school = "Konta High School",
+          block = "Konta",
+          cast = "ST",
+          gender = "Male",
+          qualification = "10th Pass",
+          questionSetName = "Set - A",
+          courseCode = "SOB",
           answersJson = amitAnswers.toString(),
           score = 14.0f,
           totalPossibleMarks = 16.0f,
@@ -252,12 +290,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "8877665544",
-          block = "Konta",
-          cast = "ST",
-          gender = "Male",
-          qualification = "10th Pass",
-          questionSetName = "Set - A",
           scannedAt = System.currentTimeMillis() - 900000L
         )
       )
@@ -276,7 +308,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-kavita-005",
           quizId = quiz1Id,
           studentId = "NG23456",
+          firstName = "Kavita",
+          lastName = "Markam",
           studentName = "Kavita Markam",
+          phoneNumber = "9826123456",
+          whatsappNumber = "9826123456",
+          school = "Govt Girls HSS",
+          block = "Dornapal",
+          cast = "ST",
+          gender = "Female",
+          qualification = "B.Sc 1st Year",
+          questionSetName = "Set - B",
+          courseCode = "SOB",
           answersJson = kavitaAnswers.toString(),
           score = 13.0f,
           totalPossibleMarks = 16.0f,
@@ -286,12 +329,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "9826123456",
-          block = "Dornapal",
-          cast = "ST",
-          gender = "Female",
-          qualification = "B.Sc 1st Year",
-          questionSetName = "Set - B",
           scannedAt = System.currentTimeMillis() - 600000L
         )
       )
@@ -310,7 +347,18 @@ abstract class AppDatabase : RoomDatabase() {
           id = "paper-suresh-006",
           quizId = quiz1Id,
           studentId = "NG92837",
+          firstName = "Suresh",
+          lastName = "Kashyap",
           studentName = "Suresh Kashyap",
+          phoneNumber = "7000192837",
+          whatsappNumber = "7000192837",
+          school = "Govt Degree College",
+          block = "Sukma",
+          cast = "SC",
+          gender = "Male",
+          qualification = "Graduate",
+          questionSetName = "Set - B",
+          courseCode = "SOB",
           answersJson = sureshAnswers.toString(),
           score = 11.0f,
           totalPossibleMarks = 16.0f,
@@ -320,12 +368,6 @@ abstract class AppDatabase : RoomDatabase() {
           blankCount = 0,
           multipleCount = 0,
           reviewRequiredCount = 0,
-          whatsappNumber = "7000192837",
-          block = "Sukma",
-          cast = "SC",
-          gender = "Male",
-          qualification = "Graduate",
-          questionSetName = "Set - B",
           scannedAt = System.currentTimeMillis() - 300000L
         )
       )

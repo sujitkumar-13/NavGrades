@@ -1,5 +1,7 @@
 package com.example.omr
 
+import android.graphics.RectF
+
 data class BubbleCoordinate(
   val questionNumber: Int,
   val option: String, // "A", "B", "C", "D"
@@ -8,86 +10,109 @@ data class BubbleCoordinate(
 )
 
 data class IdDigitBubble(
-  val column: Int, // 0..4 (5 digits)
-  val digit: Int,  // 0..9
+  val column: Int,
+  val digit: Int,
   val relX: Float,
   val relY: Float
 )
 
 object OmrLayoutDefinition {
-  // Standard Sheet relative proportions (Width: 1000, Height: 1414 -> A4 aspect ratio 1:1.414)
-  const val SHEET_ASPECT_RATIO = 1.414f
+  // Standard Sheet relative proportions (Width: 682, Height: 1024 -> ~1:1.501 aspect ratio)
+  const val SHEET_ASPECT_RATIO = 1.501f
+  const val STANDARD_WIDTH = 682
+  const val STANDARD_HEIGHT = 1024
 
   // Relative positions of corner alignment markers (relative center)
-  const val CORNER_TL_X = 0.06f
-  const val CORNER_TL_Y = 0.04f
-  const val CORNER_TR_X = 0.94f
-  const val CORNER_TR_Y = 0.04f
-  const val CORNER_BL_X = 0.06f
-  const val CORNER_BL_Y = 0.96f
-  const val CORNER_BR_X = 0.94f
-  const val CORNER_BR_Y = 0.96f
+  const val CORNER_TL_X = 0.0535f
+  const val CORNER_TL_Y = 0.0391f
+  const val CORNER_TR_X = 0.9465f
+  const val CORNER_TR_Y = 0.0391f
+  const val CORNER_BL_X = 0.0535f
+  const val CORNER_BL_Y = 0.9678f
+  const val CORNER_BR_X = 0.9465f
+  const val CORNER_BR_Y = 0.9678f
   const val CORNER_MARKER_SIZE = 0.045f // Size of black marker square
 
-  // Bubble radius relative to width
-  const val BUBBLE_RADIUS = 0.018f
+  // Bubble radius relative to width (~10px on 682 width)
+  const val BUBBLE_RADIUS = 0.015f
+
+  // Set Section Coordinates (Set A and Set B bubbles)
+  const val SET_A_BUBBLE_X = 0.2801f
+  const val SET_A_BUBBLE_Y = 0.5254f
+  const val SET_B_BUBBLE_X = 0.4311f
+  const val SET_B_BUBBLE_Y = 0.5254f
+
+  // Caste Selection Circles: ST, SC, OBC, General, Other
+  val CASTE_CIRCLES = listOf(
+    Pair(0.2067f, 0.3516f), // ST
+    Pair(0.3563f, 0.3516f), // SC
+    Pair(0.5015f, 0.3516f), // OBC
+    Pair(0.6584f, 0.3516f), // General
+    Pair(0.8284f, 0.3516f)  // Other
+  )
+  val CASTE_LABELS = listOf("ST", "SC", "OBC", "General", "Other")
+
+  // Gender Selection Circles: Female, Male, Other
+  val GENDER_CIRCLES = listOf(
+    Pair(0.2522f, 0.3906f), // Female
+    Pair(0.4384f, 0.3906f), // Male
+    Pair(0.6056f, 0.3906f)  // Other
+  )
+  val GENDER_LABELS = listOf("Female", "Male", "Other")
+
+  // Current Qualification Circles: 12th, Pursuing College, Graduated
+  val QUALIFICATION_CIRCLES = listOf(
+    Pair(0.3460f, 0.4355f), // 12th
+    Pair(0.5293f, 0.4355f), // Pursuing College
+    Pair(0.7859f, 0.4365f)  // Graduated
+  )
+  val QUALIFICATION_LABELS = listOf("12th", "Pursuing College", "Graduated")
+
+  // Targeted OCR Crop Regions (relative rect coordinates: left, top, right, bottom)
+  val COURSE_CODE_REGION = RectF(0.380f, 0.060f, 0.620f, 0.120f)
+  val FIRST_NAME_REGION  = RectF(0.205f, 0.130f, 0.960f, 0.168f)
+  val LAST_NAME_REGION   = RectF(0.205f, 0.167f, 0.960f, 0.205f)
+  val PHONE_REGION       = RectF(0.205f, 0.197f, 0.640f, 0.240f)
+  val WHATSAPP_REGION    = RectF(0.205f, 0.238f, 0.640f, 0.278f)
+  val CITY_REGION        = RectF(0.235f, 0.270f, 0.950f, 0.308f)
+  val SCHOOL_REGION      = RectF(0.235f, 0.427f, 0.950f, 0.465f)
 
   /**
-   * Generates relative coordinates for all question bubbles based on total question count.
+   * Generates relative coordinates for question bubbles matching the standard OMR template.
+   * Q1–Q8 on the left column, Q9–Q16 on the right column.
    */
-  fun getQuestionBubbleCoordinates(numQuestions: Int): List<BubbleCoordinate> {
+  fun getQuestionBubbleCoordinates(numQuestions: Int = 16): List<BubbleCoordinate> {
     val bubbles = mutableListOf<BubbleCoordinate>()
-    val numColumns = when {
-      numQuestions <= 20 -> 2
-      numQuestions <= 40 -> 2
-      numQuestions <= 60 -> 3
-      else -> 4
-    }
+    val leftOptX = listOf("A" to 0.2067f, "B" to 0.2962f, "C" to 0.3724f, "D" to 0.4457f)
+    val rightOptX = listOf("A" to 0.6686f, "B" to 0.7478f, "C" to 0.8284f, "D" to 0.9090f)
 
-    val questionsPerCol = (numQuestions + numColumns - 1) / numColumns
-    val colWidth = 0.84f / numColumns
-    val startX = 0.08f
-    val startY = 0.38f // Question grid starts below student info area
-    val endY = 0.92f
-    val rowHeight = (endY - startY) / questionsPerCol.coerceAtLeast(1)
+    val startY = 0.6064f
+    val endY = 0.8174f
+    val rowCount = 8
+    val stepY = (endY - startY) / (rowCount - 1).coerceAtLeast(1)
 
     for (q in 1..numQuestions) {
-      val colIdx = (q - 1) / questionsPerCol
-      val rowIdx = (q - 1) % questionsPerCol
-
-      val colCenterX = startX + (colIdx * colWidth)
-      val qY = startY + (rowIdx * rowHeight) + (rowHeight * 0.5f)
-
-      // 4 options: A, B, C, D
-      val options = listOf("A", "B", "C", "D")
-      val optSpacing = colWidth * 0.17f
-      val optStartX = colCenterX + (colWidth * 0.28f)
-
-      options.forEachIndexed { optIdx, optStr ->
-        val bubbleX = optStartX + (optIdx * optSpacing)
-        bubbles.add(BubbleCoordinate(q, optStr, bubbleX, qY))
+      if (q <= 8) {
+        val rowIdx = q - 1
+        val qY = startY + (rowIdx * stepY)
+        leftOptX.forEach { (opt, optX) ->
+          bubbles.add(BubbleCoordinate(q, opt, optX, qY))
+        }
+      } else if (q <= 16) {
+        val rowIdx = q - 9
+        val qY = startY + (rowIdx * stepY)
+        rightOptX.forEach { (opt, optX) ->
+          bubbles.add(BubbleCoordinate(q, opt, optX, qY))
+        }
       }
     }
     return bubbles
   }
 
   /**
-   * Generates coordinates for 5-digit Student ID grid (digits 0..9)
+   * Maintained for compatibility with template generation.
    */
   fun getStudentIdBubbleCoordinates(): List<IdDigitBubble> {
-    val bubbles = mutableListOf<IdDigitBubble>()
-    val startX = 0.52f
-    val startY = 0.16f
-    val colSpacing = 0.065f
-    val rowSpacing = 0.018f
-
-    for (col in 0..4) {
-      for (digit in 0..9) {
-        val bX = startX + (col * colSpacing)
-        val bY = startY + (digit * rowSpacing)
-        bubbles.add(IdDigitBubble(col, digit, bX, bY))
-      }
-    }
-    return bubbles
+    return emptyList()
   }
 }

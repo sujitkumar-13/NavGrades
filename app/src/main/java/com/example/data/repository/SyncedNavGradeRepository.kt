@@ -275,25 +275,35 @@ class SyncedNavGradeRepository(
     studentName: String,
     rawAnswers: Map<Int, String>,
     imagePath: String?,
+    firstName: String = "",
+    lastName: String = "",
+    phoneNumber: String = "",
     whatsappNumber: String = "",
+    school: String = "",
     block: String = "",
     cast: String = "",
     gender: String = "",
     qualification: String = "",
-    questionSetName: String = ""
+    questionSetName: String = "",
+    courseCode: String = ""
   ): ScannedPaperEntity {
     val paper = localRepo.evaluateAndSavePaper(
-      quizId,
-      studentId,
-      studentName,
-      rawAnswers,
-      imagePath,
-      whatsappNumber,
-      block,
-      cast,
-      gender,
-      qualification,
-      questionSetName
+      quizId = quizId,
+      studentId = studentId,
+      studentName = studentName,
+      rawAnswers = rawAnswers,
+      imagePath = imagePath,
+      firstName = firstName,
+      lastName = lastName,
+      phoneNumber = phoneNumber,
+      whatsappNumber = whatsappNumber,
+      school = school,
+      block = block,
+      cast = cast,
+      gender = gender,
+      qualification = qualification,
+      questionSetName = questionSetName,
+      courseCode = courseCode
     )
     if (SupabaseConfig.isConfigured()) {
       scope.launch(Dispatchers.IO) {
