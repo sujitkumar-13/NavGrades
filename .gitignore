@@ -81,6 +81,9 @@ scripts/
 
 # Temporary experiment folders, preview crops & scratch scripts
 scratch/
+omr_debug/
+debug_images/
+debug_output/
 
 # Local benchmark & validation reports
 reports/

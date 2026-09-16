@@ -80,6 +80,22 @@ object OmrHandwritingConfig {
   var isDebugAuditEnabled: Boolean = false
 
   /**
+   * Whether to export debug image crops and preprocessed cells to disk.
+   */
+  @Volatile
+  var isDebugExportEnabled: Boolean = false
+
+  /**
+   * Confidence threshold for classifying recognition results as HIGH_CONFIDENCE.
+   */
+  const val HIGH_CONFIDENCE_THRESHOLD = 0.70f
+
+  /**
+   * Confidence threshold below which recognition results are LOW_CONFIDENCE.
+   */
+  const val LOW_CONFIDENCE_THRESHOLD = 0.40f
+
+  /**
    * Last recorded audit run from a scan (null if audit not enabled).
    */
   @Volatile

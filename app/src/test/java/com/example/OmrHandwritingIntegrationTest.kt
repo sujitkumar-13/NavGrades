@@ -179,4 +179,18 @@ class OmrHandwritingIntegrationTest {
     assertFalse("Logical field must NOT contain spaces", logicalField.contains(" "))
     assertEquals(6, recognizedChars.size)
   }
+
+  @Test
+  fun testPhoneBox1PreprocessingSucceeds() {
+    val phoneBmp = loadAssetBitmap("bench_phone.png")
+    val boxW = phoneBmp.width.toFloat() / 10f
+    val left = (1 * boxW).toInt()
+    val right = (2 * boxW).toInt()
+    val cellCrop = Bitmap.createBitmap(phoneBmp, left, 0, right - left, phoneBmp.height)
+
+    val result = com.example.omr.handwriting.HandwritingPreprocessor.preprocessCell(cellCrop, isDigitField = true)
+    assertFalse("Box 1 must not be empty", result.isEmpty)
+    assertNotNull("28x28 bitmap must be generated", result.processedBitmap28x28)
+    assertNotNull("Tensor buffer must be generated", result.tensorBuffer)
+  }
 }

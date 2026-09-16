@@ -68,14 +68,29 @@ object OmrLayoutDefinition {
   )
   val QUALIFICATION_LABELS = listOf("12th", "Pursuing College", "Graduated")
 
+  // Box count constants
+  const val NAME_BOX_COUNT  = 23
+  const val PHONE_BOX_COUNT = 10
+
   // Targeted OCR Crop Regions (relative rect coordinates: left, top, right, bottom)
   val COURSE_CODE_REGION = RectF(0.380f, 0.060f, 0.620f, 0.120f)
-  val FIRST_NAME_REGION  = RectF(0.205f, 0.130f, 0.960f, 0.168f)
-  val LAST_NAME_REGION   = RectF(0.205f, 0.167f, 0.960f, 0.205f)
-  val PHONE_REGION       = RectF(0.205f, 0.197f, 0.640f, 0.240f)
-  val WHATSAPP_REGION    = RectF(0.205f, 0.238f, 0.640f, 0.278f)
-  val CITY_REGION        = RectF(0.235f, 0.270f, 0.950f, 0.308f)
-  val SCHOOL_REGION      = RectF(0.235f, 0.427f, 0.950f, 0.465f)
+  val FIRST_NAME_REGION  = RectF(0.055f, 0.150f, 0.960f, 0.186f)
+  val LAST_NAME_REGION   = RectF(0.055f, 0.188f, 0.960f, 0.224f)
+  val PHONE_REGION       = RectF(0.055f, 0.225f, 0.600f, 0.262f)
+  val WHATSAPP_REGION    = RectF(0.055f, 0.262f, 0.600f, 0.298f)
+  val CITY_REGION        = RectF(0.055f, 0.295f, 0.950f, 0.335f)
+  val SCHOOL_REGION      = RectF(0.055f, 0.455f, 0.720f, 0.495f)
+
+  // Calibrated Physical Box Grid Regions on rectified 682x1024 sheet (excluding printed field labels on left)
+  // Measured directly against physical sheets (W01, W02):
+  // First Name: x in 152..655 (w=503, 23 boxes, ~21.87px/box), y in 156..186 (h=30)
+  val FIRST_NAME_BOXES_REGION = RectF(0.222874f, 0.152344f, 0.960410f, 0.181641f)
+  // Last Name: x in 152..655 (w=503, 23 boxes, ~21.87px/box), y in 193..223 (h=30)
+  val LAST_NAME_BOXES_REGION  = RectF(0.222874f, 0.188477f, 0.960410f, 0.217773f)
+  // Phone: x in 175..380 (w=205, 10 boxes, ~20.50px/box), y in 231..261 (h=30)
+  val PHONE_BOXES_REGION      = RectF(0.256598f, 0.225586f, 0.557185f, 0.254883f)
+  // WhatsApp: x in 175..380 (w=205, 10 boxes, ~20.50px/box), y in 268..298 (h=30)
+  val WHATSAPP_BOXES_REGION   = RectF(0.256598f, 0.261719f, 0.557185f, 0.291016f)
 
   /**
    * Generates relative coordinates for question bubbles matching the standard OMR template.

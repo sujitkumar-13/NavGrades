@@ -36,6 +36,9 @@ object OmrHandwritingEngine {
   @Volatile
   private var digitInterpreter: Interpreter? = null
 
+  fun getLetterInterpreter(): Interpreter? = letterInterpreter
+  fun getDigitInterpreter(): Interpreter? = digitInterpreter
+
   private val initLock = Any()
 
   /**
