@@ -39,7 +39,8 @@ data class ExtractedStudentInfo(
   val qualification: String? = null,
   val school: String? = null,
   val questionSetName: String? = null,
-  val courseCode: String? = null
+  val courseCode: String? = null,
+  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null
 )
 
 data class OmrScanOutput(
@@ -59,7 +60,8 @@ data class OmrScanOutput(
   val qualification: String = "",
   val school: String = "",
   val questionSetName: String = "",
-  val courseCode: String = ""
+  val courseCode: String = "",
+  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null
 )
 
 data class CornerPoint(val x: Float, val y: Float)
@@ -631,7 +633,8 @@ object OmrScannerEngine {
       qualification = detectedQual.ifBlank { ocrInfo.qualification ?: "" },
       school = finalSchool,
       questionSetName = detectedSet,
-      courseCode = finalCourseCode
+      courseCode = finalCourseCode,
+      handwritingAudit = ocrInfo.handwritingAudit
     )
   }
 
@@ -694,9 +697,15 @@ object OmrScannerEngine {
   }
 
   /**
-   * Recognizes student info from region-cropped areas using ML Kit Text Recognition.
+   * Recognizes student info from region-cropped areas using ML Kit Text Recognition (or new models in Test Mode).
    */
   suspend fun extractStudentInfoFromOmr(bitmap: Bitmap): ExtractedStudentInfo {
+    // Controlled Test Mode check: use new models only when explicitly enabled and initialized
+    if (com.example.omr.handwriting.OmrHandwritingConfig.currentMode == com.example.omr.handwriting.HandwritingModelMode.NEW_BASELINE_MODEL &&
+        com.example.omr.handwriting.OmrHandwritingEngine.isInitialized()) {
+      return extractStudentInfoWithNewModel(bitmap)
+    }
+
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     return try {
       val courseCodeRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.COURSE_CODE_REGION, recognizer)
@@ -779,6 +788,100 @@ object OmrScannerEngine {
     } finally {
       recognizer.close()
     }
+  }
+
+  /**
+   * Controlled integration path for new baseline letter & digit models on boxed fields.
+   */
+  private suspend fun extractStudentInfoWithNewModel(bitmap: Bitmap): ExtractedStudentInfo {
+    val startTime = System.currentTimeMillis()
+
+    // 1. Boxed crops extraction
+    val fnBmp = getCropBitmap(bitmap, OmrLayoutDefinition.FIRST_NAME_REGION)
+    val lnBmp = getCropBitmap(bitmap, OmrLayoutDefinition.LAST_NAME_REGION)
+    val phoneBmp = getCropBitmap(bitmap, OmrLayoutDefinition.PHONE_REGION)
+    val waBmp = getCropBitmap(bitmap, OmrLayoutDefinition.WHATSAPP_REGION)
+
+    // 2. Boxed inference using new baseline models
+    val (fnText, fnAudit) = com.example.omr.handwriting.OmrHandwritingEngine.recognizeBoxedField(
+      stripBitmap = fnBmp,
+      numBoxes = 23,
+      fieldName = "First Name",
+      isDigitField = false
+    )
+    val (lnText, lnAudit) = com.example.omr.handwriting.OmrHandwritingEngine.recognizeBoxedField(
+      stripBitmap = lnBmp,
+      numBoxes = 23,
+      fieldName = "Last Name",
+      isDigitField = false
+    )
+    val (phoneText, phoneAudit) = com.example.omr.handwriting.OmrHandwritingEngine.recognizeBoxedField(
+      stripBitmap = phoneBmp,
+      numBoxes = 10,
+      fieldName = "Phone",
+      isDigitField = true
+    )
+    val (waText, waAudit) = com.example.omr.handwriting.OmrHandwritingEngine.recognizeBoxedField(
+      stripBitmap = waBmp,
+      numBoxes = 10,
+      fieldName = "WhatsApp",
+      isDigitField = true
+    )
+
+    val totalTime = (System.currentTimeMillis() - startTime).toFloat()
+    val runAudit = com.example.omr.handwriting.HandwritingRunAudit(
+      modelMode = com.example.omr.handwriting.HandwritingModelMode.NEW_BASELINE_MODEL,
+      letterModelName = com.example.omr.handwriting.OmrHandwritingEngine.LETTER_MODEL_ASSET,
+      digitModelName = com.example.omr.handwriting.OmrHandwritingEngine.DIGIT_MODEL_ASSET,
+      firstNameAudit = fnAudit,
+      lastNameAudit = lnAudit,
+      phoneAudit = phoneAudit,
+      whatsappAudit = waAudit,
+      totalInferenceTimeMs = totalTime
+    )
+    com.example.omr.handwriting.OmrHandwritingConfig.lastRunAudit = runAudit
+
+    val combinedName = listOf(fnText, lnText).filter { it.isNotBlank() }.joinToString(" ").trim()
+    val studentId = if (phoneText.isNotBlank()) "NG$phoneText" else "NG-${(1000..9999).random()}"
+
+    // 3. Fallback to ML Kit for printed metadata fields (Course Code, City, School)
+    val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    val courseCodeClean: String
+    val cityClean: String
+    val schoolClean: String
+    try {
+      val cc = recognizeTextInCrop(bitmap, OmrLayoutDefinition.COURSE_CODE_REGION, recognizer)
+      courseCodeClean = cc.replace(Regex("""[^A-Za-z0-9]"""), "").trim().uppercase()
+      val c = recognizeTextInCrop(bitmap, OmrLayoutDefinition.CITY_REGION, recognizer)
+      cityClean = c.replace(Regex("""[|_~`]+"""), "").trim()
+      val s = recognizeTextInCrop(bitmap, OmrLayoutDefinition.SCHOOL_REGION, recognizer)
+      schoolClean = s.replace(Regex("""[|_~`]+"""), "").trim()
+    } finally {
+      recognizer.close()
+    }
+
+    return ExtractedStudentInfo(
+      firstName = fnText.takeIf { it.isNotBlank() },
+      lastName = lnText.takeIf { it.isNotBlank() },
+      studentName = combinedName.takeIf { it.isNotBlank() },
+      studentId = studentId,
+      phoneNumber = phoneText.takeIf { it.isNotBlank() },
+      whatsappNumber = waText.takeIf { it.isNotBlank() } ?: phoneText.takeIf { it.isNotBlank() },
+      block = cityClean.takeIf { it.isNotBlank() },
+      school = schoolClean.takeIf { it.isNotBlank() },
+      courseCode = courseCodeClean.takeIf { it.isNotBlank() },
+      handwritingAudit = runAudit
+    )
+  }
+
+  private fun getCropBitmap(bitmap: Bitmap, region: android.graphics.RectF): Bitmap {
+    val bW = bitmap.width
+    val bH = bitmap.height
+    val cropX = (region.left * bW).toInt().coerceIn(0, bW - 1)
+    val cropY = (region.top * bH).toInt().coerceIn(0, bH - 1)
+    val cropW = ((region.right - region.left) * bW).toInt().coerceIn(1, bW - cropX)
+    val cropH = ((region.bottom - region.top) * bH).toInt().coerceIn(1, bH - cropY)
+    return Bitmap.createBitmap(bitmap, cropX, cropY, cropW, cropH)
   }
 
   private suspend fun recognizeTextInCrop(

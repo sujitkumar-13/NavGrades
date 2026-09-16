@@ -63,3 +63,38 @@ Thumbs.db
 scrcpy*
 *.tar.gz
 
+# Python virtual environments & bytecode cache
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Offline research datasets & data generation outputs
+dataset/
+
+# Offline research scripts (not part of Android app build)
+scripts/
+
+# Temporary experiment folders, preview crops & scratch scripts
+scratch/
+
+# Local benchmark & validation reports
+reports/
+
+# Machine-specific / local device test artifacts
+app/src/androidTest/assets/
+app/src/androidTest/java/com/example/*BenchmarkTest.kt
+app/src/androidTest/java/com/example/ProductionOmrDeviceVerificationTest.kt
+
+# Model training checkpoints & temporary model weights
+*.h5
+*.ckpt*
+checkpoints/
+
+# IMPORTANT: Ensure production TFLite model assets remain tracked
+!app/src/main/assets/models/omr_letter_baseline.tflite
+!app/src/main/assets/models/omr_digit_baseline.tflite

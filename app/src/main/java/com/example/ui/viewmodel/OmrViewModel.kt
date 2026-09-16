@@ -38,6 +38,10 @@ class OmrViewModel(application: Application) : AndroidViewModel(application) {
   val allAnswerKeys: StateFlow<List<AnswerKeySetEntity>> = repository.allAnswerKeys
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+  init {
+    com.example.omr.handwriting.OmrHandwritingEngine.initialize(application)
+  }
+
   private val _selectedQuiz = MutableStateFlow<QuizEntity?>(null)
   val selectedQuiz: StateFlow<QuizEntity?> = _selectedQuiz.asStateFlow()
 

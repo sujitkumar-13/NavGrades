@@ -14,6 +14,7 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    com.example.omr.handwriting.OmrHandwritingEngine.initialize(applicationContext)
     setContent {
       MyApplicationTheme {
         Surface(modifier = Modifier.fillMaxSize()) {

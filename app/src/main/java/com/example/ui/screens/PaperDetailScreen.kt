@@ -366,6 +366,68 @@ fun PaperDetailScreen(
           }
         }
 
+        if (com.example.omr.handwriting.OmrHandwritingConfig.isDebugAuditEnabled) {
+          val audit = com.example.omr.handwriting.OmrHandwritingConfig.lastRunAudit
+          if (audit != null) {
+            item {
+              Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                  containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(vertical = 4.dp)
+              ) {
+                Column(
+                  modifier = Modifier.padding(14.dp),
+                  verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Text(
+                    text = "🛠 TEST MODE — Handwriting Model Audit",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                  )
+                  Text(
+                    text = "Mode: ${audit.modelMode} | Latency: ${"%.1f".format(audit.totalInferenceTimeMs)} ms",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                  )
+                  audit.firstNameAudit?.let { fn ->
+                    Text(
+                      text = "First Name: '${fn.recognizedText}' (avg conf: ${"%.1f%%".format(fn.avgConfidence * 100)})",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                  }
+                  audit.lastNameAudit?.let { ln ->
+                    Text(
+                      text = "Last Name: '${ln.recognizedText}' (avg conf: ${"%.1f%%".format(ln.avgConfidence * 100)})",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                  }
+                  audit.phoneAudit?.let { p ->
+                    Text(
+                      text = "Phone: '${p.recognizedText}' (avg conf: ${"%.1f%%".format(p.avgConfidence * 100)})",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                  }
+                  audit.whatsappAudit?.let { wa ->
+                    Text(
+                      text = "WhatsApp: '${wa.recognizedText}' (avg conf: ${"%.1f%%".format(wa.avgConfidence * 100)})",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // Student Profile Details Card
         item {
           Card(
@@ -400,12 +462,12 @@ fun PaperDetailScreen(
               ProfileDetailRow(label = "Last Name", value = lastNameDisplay)
               ProfileDetailRow(label = "Phone Number", value = phoneDisplay)
               ProfileDetailRow(label = "WhatsApp Number", value = whatsappDisplay)
-              ProfileDetailRow(label = "City / Village", value = currentPaper.block)
+              ProfileDetailRow(label = "City / Block / Village", value = currentPaper.block)
               ProfileDetailRow(label = "Caste", value = currentPaper.cast)
               ProfileDetailRow(label = "Gender", value = currentPaper.gender)
               ProfileDetailRow(label = "Current Qualification", value = currentPaper.qualification)
               ProfileDetailRow(label = "School / College", value = currentPaper.school)
-              ProfileDetailRow(label = "Question Set", value = currentPaper.questionSetName)
+              ProfileDetailRow(label = "Set", value = currentPaper.questionSetName)
             }
           }
         }
