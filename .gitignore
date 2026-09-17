@@ -101,3 +101,8 @@ checkpoints/
 # IMPORTANT: Ensure production TFLite model assets remain tracked
 !app/src/main/assets/models/omr_letter_baseline.tflite
 !app/src/main/assets/models/omr_digit_baseline.tflite
+
+# Local Graphify integration & generated output
+.agents/rules/graphify.md
+.agents/workflows/graphify.md
+graphify-out/
