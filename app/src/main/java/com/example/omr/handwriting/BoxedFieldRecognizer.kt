@@ -174,13 +174,17 @@ object BoxedFieldRecognizer {
       }
       // Case C: Full field row crop from rectified sheet
       !fieldType.isDigitField && bW in 600..650 -> {
-        gridStartX = ((0.222874f - 0.055f) / (0.960f - 0.055f) * bW)
-        gridWidth = bW - gridStartX
+        gridStartX = ((OmrLayoutDefinition.FIRST_NAME_BOXES_REGION.left - OmrLayoutDefinition.FIRST_NAME_REGION.left) /
+          (OmrLayoutDefinition.FIRST_NAME_REGION.right - OmrLayoutDefinition.FIRST_NAME_REGION.left) * bW)
+        gridWidth = (OmrLayoutDefinition.FIRST_NAME_BOXES_REGION.width() /
+          (OmrLayoutDefinition.FIRST_NAME_REGION.right - OmrLayoutDefinition.FIRST_NAME_REGION.left) * bW)
         isGenericFallback = false
       }
       fieldType.isDigitField && bW in 360..400 -> {
-        gridStartX = ((0.256598f - 0.055f) / (0.600f - 0.055f) * bW)
-        gridWidth = bW - gridStartX
+        gridStartX = ((OmrLayoutDefinition.PHONE_BOXES_REGION.left - OmrLayoutDefinition.PHONE_REGION.left) /
+          (OmrLayoutDefinition.PHONE_REGION.right - OmrLayoutDefinition.PHONE_REGION.left) * bW)
+        gridWidth = (OmrLayoutDefinition.PHONE_BOXES_REGION.width() /
+          (OmrLayoutDefinition.PHONE_REGION.right - OmrLayoutDefinition.PHONE_REGION.left) * bW)
         isGenericFallback = false
       }
       else -> {

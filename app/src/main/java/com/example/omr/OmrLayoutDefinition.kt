@@ -37,34 +37,34 @@ object OmrLayoutDefinition {
   const val BUBBLE_RADIUS = 0.015f
 
   // Set Section Coordinates (Set A and Set B bubbles)
-  const val SET_A_BUBBLE_X = 0.2801f
-  const val SET_A_BUBBLE_Y = 0.5254f
-  const val SET_B_BUBBLE_X = 0.4311f
-  const val SET_B_BUBBLE_Y = 0.5254f
+  const val SET_A_BUBBLE_X = 0.2977f
+  const val SET_A_BUBBLE_Y = 0.5137f
+  const val SET_B_BUBBLE_X = 0.4516f
+  const val SET_B_BUBBLE_Y = 0.5137f
 
   // Caste Selection Circles: ST, SC, OBC, General, Other
   val CASTE_CIRCLES = listOf(
-    Pair(0.2067f, 0.3516f), // ST
-    Pair(0.3563f, 0.3516f), // SC
-    Pair(0.5015f, 0.3516f), // OBC
-    Pair(0.6584f, 0.3516f), // General
-    Pair(0.8284f, 0.3516f)  // Other
+    Pair(0.2639f, 0.3408f), // ST
+    Pair(0.3959f, 0.3408f), // SC
+    Pair(0.5381f, 0.3408f), // OBC
+    Pair(0.6818f, 0.3408f), // General
+    Pair(0.8387f, 0.3408f)  // Other
   )
   val CASTE_LABELS = listOf("ST", "SC", "OBC", "General", "Other")
 
   // Gender Selection Circles: Female, Male, Other
   val GENDER_CIRCLES = listOf(
-    Pair(0.2522f, 0.3906f), // Female
-    Pair(0.4384f, 0.3906f), // Male
-    Pair(0.6056f, 0.3906f)  // Other
+    Pair(0.2639f, 0.3779f), // Female
+    Pair(0.4560f, 0.3779f), // Male
+    Pair(0.6276f, 0.3779f)  // Other
   )
   val GENDER_LABELS = listOf("Female", "Male", "Other")
 
   // Current Qualification Circles: 12th, Pursuing College, Graduated
   val QUALIFICATION_CIRCLES = listOf(
-    Pair(0.3460f, 0.4355f), // 12th
-    Pair(0.5293f, 0.4355f), // Pursuing College
-    Pair(0.7859f, 0.4365f)  // Graduated
+    Pair(0.3372f, 0.4219f), // 12th
+    Pair(0.5425f, 0.4219f), // Pursuing College
+    Pair(0.7991f, 0.4219f)  // Graduated
   )
   val QUALIFICATION_LABELS = listOf("12th", "Pursuing College", "Graduated")
 
@@ -73,24 +73,25 @@ object OmrLayoutDefinition {
   const val PHONE_BOX_COUNT = 10
 
   // Targeted OCR Crop Regions (relative rect coordinates: left, top, right, bottom)
+  @Deprecated("Obsolete on new canonical form. Header contains static 'SOB' text with no student input field.")
   val COURSE_CODE_REGION = RectF(0.380f, 0.060f, 0.620f, 0.120f)
-  val FIRST_NAME_REGION  = RectF(0.055f, 0.150f, 0.960f, 0.186f)
-  val LAST_NAME_REGION   = RectF(0.055f, 0.188f, 0.960f, 0.224f)
-  val PHONE_REGION       = RectF(0.055f, 0.225f, 0.600f, 0.262f)
-  val WHATSAPP_REGION    = RectF(0.055f, 0.262f, 0.600f, 0.298f)
-  val CITY_REGION        = RectF(0.055f, 0.295f, 0.950f, 0.335f)
-  val SCHOOL_REGION      = RectF(0.055f, 0.455f, 0.720f, 0.495f)
+  val FIRST_NAME_REGION  = RectF(0.050f, 0.135f, 0.950f, 0.170f)
+  val LAST_NAME_REGION   = RectF(0.050f, 0.172f, 0.950f, 0.208f)
+  val PHONE_REGION       = RectF(0.050f, 0.212f, 0.600f, 0.248f)
+  val WHATSAPP_REGION    = RectF(0.050f, 0.250f, 0.600f, 0.288f)
+  val CITY_REGION        = RectF(0.050f, 0.281f, 0.950f, 0.318f)
+  val SCHOOL_REGION      = RectF(0.050f, 0.432f, 0.950f, 0.466f)
 
   // Calibrated Physical Box Grid Regions on rectified 682x1024 sheet (excluding printed field labels on left)
-  // Measured directly against physical sheets (W01, W02):
-  // First Name: x in 152..655 (w=503, 23 boxes, ~21.87px/box), y in 156..186 (h=30)
-  val FIRST_NAME_BOXES_REGION = RectF(0.222874f, 0.152344f, 0.960410f, 0.181641f)
-  // Last Name: x in 152..655 (w=503, 23 boxes, ~21.87px/box), y in 193..223 (h=30)
-  val LAST_NAME_BOXES_REGION  = RectF(0.222874f, 0.188477f, 0.960410f, 0.217773f)
-  // Phone: x in 175..380 (w=205, 10 boxes, ~20.50px/box), y in 231..261 (h=30)
-  val PHONE_BOXES_REGION      = RectF(0.256598f, 0.225586f, 0.557185f, 0.254883f)
-  // WhatsApp: x in 175..380 (w=205, 10 boxes, ~20.50px/box), y in 268..298 (h=30)
-  val WHATSAPP_BOXES_REGION   = RectF(0.256598f, 0.261719f, 0.557185f, 0.291016f)
+  // Measured directly against physical new canonical form:
+  // First Name: x in 175..645 (w=470, 23 boxes, ~20.43px/box), y in 143..168 (h=25)
+  val FIRST_NAME_BOXES_REGION = RectF(0.256598f, 0.139648f, 0.945748f, 0.164063f)
+  // Last Name: x in 175..645 (w=470, 23 boxes, ~20.43px/box), y in 180..206 (h=26)
+  val LAST_NAME_BOXES_REGION  = RectF(0.256598f, 0.175781f, 0.945748f, 0.201172f)
+  // Phone: x in 190..402 (w=212, 10 boxes, ~21.20px/box), y in 221..246 (h=25)
+  val PHONE_BOXES_REGION      = RectF(0.278592f, 0.215820f, 0.589443f, 0.240234f)
+  // WhatsApp: x in 190..402 (w=212, 10 boxes, ~21.20px/box), y in 259..285 (h=26)
+  val WHATSAPP_BOXES_REGION   = RectF(0.278592f, 0.252930f, 0.589443f, 0.278320f)
 
   /**
    * Generates relative coordinates for question bubbles matching the standard OMR template.
@@ -98,11 +99,11 @@ object OmrLayoutDefinition {
    */
   fun getQuestionBubbleCoordinates(numQuestions: Int = 16): List<BubbleCoordinate> {
     val bubbles = mutableListOf<BubbleCoordinate>()
-    val leftOptX = listOf("A" to 0.2067f, "B" to 0.2962f, "C" to 0.3724f, "D" to 0.4457f)
-    val rightOptX = listOf("A" to 0.6686f, "B" to 0.7478f, "C" to 0.8284f, "D" to 0.9090f)
+    val leftOptX = listOf("A" to 0.2185f, "B" to 0.2970f, "C" to 0.3755f, "D" to 0.4540f)
+    val rightOptX = listOf("A" to 0.6657f, "B" to 0.7434f, "C" to 0.8211f, "D" to 0.8988f)
 
-    val startY = 0.6064f
-    val endY = 0.8174f
+    val startY = 0.5889f
+    val endY = 0.7930f
     val rowCount = 8
     val stepY = (endY - startY) / (rowCount - 1).coerceAtLeast(1)
 

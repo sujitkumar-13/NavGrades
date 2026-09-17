@@ -1,11 +1,6 @@
 package com.example.omr.handwriting
 
 import android.graphics.Bitmap
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 
 /**
  * Clean Hybrid implementation of HandwritingRecognitionEngine.
@@ -32,8 +27,8 @@ class HybridHandwritingEngine(
     // 2. Track B: Freehand Fields (City & School) via pluggable FreehandOcrProvider (Gemini with ML Kit fallback)
     val (cityResult, schoolResult) = freehandProvider.recognizeFreehandFields(crops.cityCrop, crops.schoolCrop)
 
-    // 3. Course Code: Extract printed Course Code (e.g. SOB, MCA) from courseCodeCrop
-    val courseCodeClean = recognizeCourseCode(crops.courseCodeCrop)
+    // 3. Course Code: Static header "SOB" is not an active student input field; no OCR performed
+    val courseCodeClean = "SOB"
 
     val totalTime = (System.currentTimeMillis() - startTime).toFloat()
 
@@ -107,25 +102,6 @@ class HybridHandwritingEngine(
   override suspend fun recognizeFromSheet(rectifiedSheet: Bitmap): HandwritingScanResult {
     val crops = OmrFieldCrops.fromRectifiedSheet(rectifiedSheet)
     return recognizeStudentInfo(crops)
-  }
-
-  private suspend fun recognizeCourseCode(crop: Bitmap): String {
-    return try {
-      val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-      try {
-        val raw = suspendCancellableCoroutine<String> { cont ->
-          val inputImage = InputImage.fromBitmap(crop, 0)
-          recognizer.process(inputImage)
-            .addOnSuccessListener { visionText -> cont.resume(visionText.text) }
-            .addOnFailureListener { cont.resume("") }
-        }
-        raw.replace(Regex("""[^A-Za-z0-9]"""), "").trim().uppercase()
-      } finally {
-        recognizer.close()
-      }
-    } catch (e: Throwable) {
-      ""
-    }
   }
 
   companion object {

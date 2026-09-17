@@ -64,7 +64,7 @@ data class OmrScanOutput(
   val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null
 )
 
-data class CornerPoint(val x: Float, val y: Float)
+data class CornerPoint(val x: Float, val y: Float, val size: Float = 0.045f)
 
 data class CornerAlignmentState(
   val tl: Boolean = false,
@@ -75,7 +75,9 @@ data class CornerAlignmentState(
   val trPos: CornerPoint? = null,
   val blPos: CornerPoint? = null,
   val brPos: CornerPoint? = null,
-  val isGeometryValid: Boolean = false
+  val isGeometryValid: Boolean = false,
+  val imageWidth: Int = 0,
+  val imageHeight: Int = 0
 ) {
   val allAligned: Boolean get() = tl && tr && bl && br
   val isReadyForCapture: Boolean get() = allAligned && isGeometryValid
@@ -151,7 +153,9 @@ object OmrScannerEngine {
       trPos = trPos,
       blPos = blPos,
       brPos = brPos,
-      isGeometryValid = geometryValid
+      isGeometryValid = geometryValid,
+      imageWidth = w,
+      imageHeight = h
     )
   }
 
@@ -331,7 +335,8 @@ object OmrScannerEngine {
 
                 if (score > bestScore) {
                   bestScore = score
-                  bestPoint = CornerPoint(cenX / w, cenY / h)
+                  val markerRelSize = maxOf(bw, bh).toFloat() / w.toFloat()
+                  bestPoint = CornerPoint(cenX / w, cenY / h, markerRelSize)
                 }
               }
             }
@@ -753,7 +758,6 @@ object OmrScannerEngine {
   private suspend fun extractLegacyStudentInfo(bitmap: Bitmap): ExtractedStudentInfo {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     return try {
-      val courseCodeRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.COURSE_CODE_REGION, recognizer)
       val firstNameRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.FIRST_NAME_REGION, recognizer)
       val lastNameRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.LAST_NAME_REGION, recognizer)
       val phoneRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.PHONE_REGION, recognizer)
@@ -761,8 +765,8 @@ object OmrScannerEngine {
       val cityRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.CITY_REGION, recognizer)
       val schoolRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.SCHOOL_REGION, recognizer)
 
-      // Clean Course Code (e.g. "SOB", "MCA")
-      val courseCode = courseCodeRaw.replace(Regex("""[^A-Za-z0-9]"""), "").trim().uppercase()
+      // Course code on new canonical form is static "SOB" header
+      val courseCode = "SOB"
 
       // Clean First and Last Name
       val firstName = firstNameRaw.replace(Regex("""[^A-Za-z\s]"""), "").replace(Regex("""\s+"""), " ").trim()

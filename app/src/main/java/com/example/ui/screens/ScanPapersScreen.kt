@@ -339,130 +339,168 @@ fun ScanPapersScreen(
             val canvasW = size.width
             val canvasH = size.height
 
-            // Maximize scanning viewfinder to cover almost the entire usable camera screen
-            val targetRatio = 1.46f // Standard OMR / A4 sheet proportion
-            val maxUsableW = canvasW * 0.95f // Covers 95% of screen width
-            val bottomReserved = 96.dp.toPx() // Room for floating status bar at bottom
-            val maxUsableH = canvasH - bottomReserved
+            // Aspect ratio of canonical sheet (1024 / 682 ~ 1.501f)
+            val sheetAspectRatio = OmrLayoutDefinition.SHEET_ASPECT_RATIO
+            val bottomReserved = 100.dp.toPx()
+            val maxAvailableH = canvasH - bottomReserved - 24.dp.toPx()
 
-            var finalSheetW = maxUsableW
-            var finalSheetH = finalSheetW * targetRatio
+            // Keep a comfortable visual margin between physical sheet and screen/frame edges
+            val frameMargin = 16.dp.toPx()
 
-            if (finalSheetH > maxUsableH) {
-              finalSheetH = maxUsableH
-              finalSheetW = finalSheetH / targetRatio
+            // Target sheet dimensions inside viewfinder (fits comfortably without touching boundary)
+            var sheetW = canvasW * 0.85f
+            var sheetH = sheetW * sheetAspectRatio
+
+            if (sheetH > maxAvailableH) {
+              sheetH = maxAvailableH
+              sheetW = sheetH / sheetAspectRatio
             }
 
-            val left = (canvasW - finalSheetW) / 2f
-            val top = ((maxUsableH - finalSheetH) / 2f + 8.dp.toPx()).coerceAtLeast(16.dp.toPx())
-            val right = left + finalSheetW
-            val bottom = top + finalSheetH
+            val sheetLeft = (canvasW - sheetW) / 2f
+            val sheetTop = ((maxAvailableH - sheetH) / 2f + 16.dp.toPx()).coerceAtLeast(18.dp.toPx())
+            val sheetRight = sheetLeft + sheetW
+            val sheetBottom = sheetTop + sheetH
+
+            // Outer scanning viewfinder frame bounds (spaced outwards by frameMargin)
+            val frameLeft = (sheetLeft - frameMargin).coerceAtLeast(6.dp.toPx())
+            val frameTop = (sheetTop - frameMargin).coerceAtLeast(6.dp.toPx())
+            val frameRight = (sheetRight + frameMargin).coerceAtMost(canvasW - 6.dp.toPx())
+            val frameBottom = (sheetBottom + frameMargin)
+            val frameW = frameRight - frameLeft
+            val frameH = frameBottom - frameTop
 
             // 1. Semi-transparent scrim outside sheet area
-            val scrimColor = Color(0x55000000)
-            drawRect(color = scrimColor, topLeft = Offset(0f, 0f), size = Size(canvasW, top))
-            drawRect(color = scrimColor, topLeft = Offset(0f, bottom), size = Size(canvasW, canvasH - bottom))
-            drawRect(color = scrimColor, topLeft = Offset(0f, top), size = Size(left, finalSheetH))
-            drawRect(color = scrimColor, topLeft = Offset(right, top), size = Size(canvasW - right, finalSheetH))
+            val scrimColor = Color(0x50000000)
+            drawRect(color = scrimColor, topLeft = Offset(0f, 0f), size = Size(canvasW, frameTop))
+            drawRect(color = scrimColor, topLeft = Offset(0f, frameBottom), size = Size(canvasW, canvasH - frameBottom))
+            drawRect(color = scrimColor, topLeft = Offset(0f, frameTop), size = Size(frameLeft, frameH))
+            drawRect(color = scrimColor, topLeft = Offset(frameRight, frameTop), size = Size(canvasW - frameRight, frameH))
 
-            // 2. Viewfinder boundary outline
+            // 2. Viewfinder boundary outline with 2px stroke
             val isLockedAndSteady = cornerAlignment.isReadyForCapture && stableFrameCount >= 2
             val frameColor = if (isLockedAndSteady) Color(0xFF00E676)
                              else if (cornerAlignment.isReadyForCapture) Color(0xFF00E676)
                              else if (cornerAlignment.count > 0) Color(0xFFFFB300)
                              else Color(0x77FFFFFF)
+            val frameStrokeWidth = 2.dp.toPx()
             drawRoundRect(
               color = frameColor,
-              topLeft = Offset(left, top),
-              size = Size(finalSheetW, finalSheetH),
-              cornerRadius = CornerRadius(14f, 14f),
-              style = Stroke(width = if (isLockedAndSteady) 4f else if (cornerAlignment.count > 0) 3f else 2f)
+              topLeft = Offset(frameLeft, frameTop),
+              size = Size(frameW, frameH),
+              cornerRadius = CornerRadius(16f, 16f),
+              style = Stroke(width = frameStrokeWidth)
             )
 
             // 3. Corner L-bracket reticle guides at sheet perimeter
-            val bracketLen = (finalSheetW * 0.08f).coerceAtLeast(24.dp.toPx())
-            val bracketStroke = Stroke(width = if (isLockedAndSteady) 5f else 4f, cap = StrokeCap.Round)
+            val bracketLen = (sheetW * 0.07f).coerceAtLeast(20.dp.toPx())
+            val bracketStroke = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
             val bracketColor = if (isLockedAndSteady) Color(0xFF00E676)
                                else if (cornerAlignment.count > 0) Color(0xFFFFB300)
-                               else Color.White
+                               else Color(0x88FFFFFF)
 
             // Top-Left L
-            drawLine(bracketColor, Offset(left, top), Offset(left + bracketLen, top), bracketStroke.width)
-            drawLine(bracketColor, Offset(left, top), Offset(left, top + bracketLen), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetLeft, sheetTop), Offset(sheetLeft + bracketLen, sheetTop), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetLeft, sheetTop), Offset(sheetLeft, sheetTop + bracketLen), bracketStroke.width)
             // Top-Right L
-            drawLine(bracketColor, Offset(right, top), Offset(right - bracketLen, top), bracketStroke.width)
-            drawLine(bracketColor, Offset(right, top), Offset(right, top + bracketLen), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetRight, sheetTop), Offset(sheetRight - bracketLen, sheetTop), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetRight, sheetTop), Offset(sheetRight, sheetTop + bracketLen), bracketStroke.width)
             // Bottom-Left L
-            drawLine(bracketColor, Offset(left, bottom), Offset(left + bracketLen, bottom), bracketStroke.width)
-            drawLine(bracketColor, Offset(left, bottom), Offset(left, bottom - bracketLen), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetLeft, sheetBottom), Offset(sheetLeft + bracketLen, sheetBottom), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetLeft, sheetBottom), Offset(sheetLeft, sheetBottom - bracketLen), bracketStroke.width)
             // Bottom-Right L
-            drawLine(bracketColor, Offset(right, bottom), Offset(right - bracketLen, bottom), bracketStroke.width)
-            drawLine(bracketColor, Offset(right, bottom), Offset(right, bottom - bracketLen), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetRight, sheetBottom), Offset(sheetRight - bracketLen, sheetBottom), bracketStroke.width)
+            drawLine(bracketColor, Offset(sheetRight, sheetBottom), Offset(sheetRight, sheetBottom - bracketLen), bracketStroke.width)
 
-            // 4. 4 Corner Fiducial Target Markers
-            val cornerBoxSize = finalSheetW * 0.085f
-            val halfBox = cornerBoxSize / 2f
-            val innerBlackSize = cornerBoxSize * 0.55f
-            val halfInner = innerBlackSize / 2f
+            // 4. 4 Corner Fiducial Target Markers (responsive size, centered on real detected markers, thin ~2px stroke)
+            val imgW = cornerAlignment.imageWidth
+            val imgH = cornerAlignment.imageHeight
+            val guideStrokeWidth = 2.dp.toPx() // ~2px thin stroke
 
-            val tlCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_TL_X)
-            val tlCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_TL_Y)
+            // Default corner target positions when markers are not yet detected
+            val defaultTlX = sheetLeft + (sheetW * 0.038f)
+            val defaultTlY = sheetTop + (sheetH * 0.026f)
 
-            val trCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_TR_X)
-            val trCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_TR_Y)
+            val defaultTrX = sheetRight - (sheetW * 0.038f)
+            val defaultTrY = sheetTop + (sheetH * 0.026f)
 
-            val blCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_BL_X)
-            val blCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_BL_Y)
+            val defaultBlX = sheetLeft + (sheetW * 0.038f)
+            val defaultBlY = sheetBottom - (sheetH * 0.026f)
 
-            val brCenterX = left + (finalSheetW * OmrLayoutDefinition.CORNER_BR_X)
-            val brCenterY = top + (finalSheetH * OmrLayoutDefinition.CORNER_BR_Y)
+            val defaultBrX = sheetRight - (sheetW * 0.038f)
+            val defaultBrY = sheetBottom - (sheetH * 0.026f)
+
+            // Responsive marker mapping from camera image coordinates to Canvas screen coordinates
+            fun getCornerGuide(pos: com.example.omr.CornerPoint?, defaultX: Float, defaultY: Float): Pair<Offset, Float> {
+              if (pos != null && imgW > 0 && imgH > 0) {
+                val scale = maxOf(canvasW / imgW.toFloat(), canvasH / imgH.toFloat())
+                val offsetX = (canvasW - imgW * scale) / 2f
+                val offsetY = (canvasH - imgH * scale) / 2f
+                val sx = offsetX + (pos.x * imgW * scale)
+                val sy = offsetY + (pos.y * imgH * scale)
+                val markerPx = pos.size * imgW * scale
+                val boxSize = (markerPx * 1.35f).coerceIn(24.dp.toPx(), 44.dp.toPx())
+                return Pair(Offset(sx, sy), boxSize)
+              } else {
+                val fallbackSize = (sheetW * 0.085f).coerceIn(24.dp.toPx(), 40.dp.toPx())
+                return Pair(Offset(defaultX, defaultY), fallbackSize)
+              }
+            }
+
+            val (tlCenter, tlSize) = getCornerGuide(cornerAlignment.tlPos, defaultTlX, defaultTlY)
+            val (trCenter, trSize) = getCornerGuide(cornerAlignment.trPos, defaultTrX, defaultTrY)
+            val (blCenter, blSize) = getCornerGuide(cornerAlignment.blPos, defaultBlX, defaultBlY)
+            val (brCenter, brSize) = getCornerGuide(cornerAlignment.brPos, defaultBrX, defaultBrY)
 
             val vibrantGreen = Color(0xFF00E676)
-            val greenBorder = Color(0xFF00C853)
-            val guideTargetColor = Color(0x66FFFFFF)
+            val alignedFill = Color(0x2000E676) // 12% translucent green tint
+            val unalignedBorder = Color(0x66FFFFFF)
+            val unalignedFill = Color(0x0AFFFFFF)
 
-            val allCorners = listOf(
-              Triple(Offset(tlCenterX, tlCenterY), cornerAlignment.tl || lastPaper != null || isScanning, "TL"),
-              Triple(Offset(trCenterX, trCenterY), cornerAlignment.tr || lastPaper != null || isScanning, "TR"),
-              Triple(Offset(blCenterX, blCenterY), cornerAlignment.bl || lastPaper != null || isScanning, "BL"),
-              Triple(Offset(brCenterX, brCenterY), cornerAlignment.br || lastPaper != null || isScanning, "BR")
+            val cornerGuides = listOf(
+              Triple(tlCenter, cornerAlignment.tl || lastPaper != null || isScanning, tlSize),
+              Triple(trCenter, cornerAlignment.tr || lastPaper != null || isScanning, trSize),
+              Triple(blCenter, cornerAlignment.bl || lastPaper != null || isScanning, blSize),
+              Triple(brCenter, cornerAlignment.br || lastPaper != null || isScanning, brSize)
             )
 
-            allCorners.forEach { (center, isAligned, _) ->
+            cornerGuides.forEach { (center, isAligned, boxSize) ->
+              val halfBox = boxSize / 2f
+              val boxTopLeft = Offset(center.x - halfBox, center.y - halfBox)
+              val boxRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+
               if (isAligned) {
-                // Aligned state: vibrant green box with dark fiducial core
-                drawRect(
+                // Aligned state: thin ~2px green stroke centered on the real detected marker
+                drawRoundRect(
+                  color = alignedFill,
+                  topLeft = boxTopLeft,
+                  size = Size(boxSize, boxSize),
+                  cornerRadius = boxRadius
+                )
+                drawRoundRect(
                   color = vibrantGreen,
-                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                  size = Size(cornerBoxSize, cornerBoxSize)
-                )
-                drawRect(
-                  color = greenBorder,
-                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                  size = Size(cornerBoxSize, cornerBoxSize),
-                  style = Stroke(width = 2.5f)
-                )
-                drawRect(
-                  color = Color.Black,
-                  topLeft = Offset(center.x - halfInner, center.y - halfInner),
-                  size = Size(innerBlackSize, innerBlackSize)
+                  topLeft = boxTopLeft,
+                  size = Size(boxSize, boxSize),
+                  cornerRadius = boxRadius,
+                  style = Stroke(width = guideStrokeWidth)
                 )
               } else {
-                // Unaligned state: subtle target frame guide indicating where to align marker
-                drawRect(
-                  color = Color(0x18FFFFFF),
-                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                  size = Size(cornerBoxSize, cornerBoxSize)
+                // Unaligned state: thin ~2px subtle outline guide at corner target
+                drawRoundRect(
+                  color = unalignedFill,
+                  topLeft = boxTopLeft,
+                  size = Size(boxSize, boxSize),
+                  cornerRadius = boxRadius
                 )
-                drawRect(
-                  color = guideTargetColor,
-                  topLeft = Offset(center.x - halfBox, center.y - halfBox),
-                  size = Size(cornerBoxSize, cornerBoxSize),
-                  style = Stroke(width = 1.5f)
+                drawRoundRect(
+                  color = unalignedBorder,
+                  topLeft = boxTopLeft,
+                  size = Size(boxSize, boxSize),
+                  cornerRadius = boxRadius,
+                  style = Stroke(width = guideStrokeWidth)
                 )
                 drawCircle(
-                  color = Color(0x88FFFFFF),
-                  radius = 3.dp.toPx(),
+                  color = Color(0x55FFFFFF),
+                  radius = 2.dp.toPx(),
                   center = center
                 )
               }
