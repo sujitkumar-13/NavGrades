@@ -456,11 +456,16 @@ object HandwritingPreprocessor {
       return FreeHandwritingResult(stripBitmap, false, 0)
     }
 
-    // Cutoff ratio for printed label only if full sheet crop is passed
-    val labelCutoffRatio = when {
-      bW >= 500 && fieldType == FreeFieldType.CITY -> 0.20f
-      bW >= 500 && fieldType == FreeFieldType.SCHOOL -> 0.25f
-      else -> 0.0f // Already cropped or benchmark asset
+    // Strip the printed field label from the left of the crop.
+    // The CITY region (0.055–0.950 of 682px sheet = ~610px) always triggers,
+    // but the SCHOOL region (0.055–0.720 = ~454px) was previously blocked by
+    // the bW >= 500 guard, causing the printed "School / College" label to be
+    // fed verbatim to ML Kit.  The fix: apply the ratio based on field type
+    // regardless of absolute pixel width. Pre-cropped benchmark strips that
+    // contain no label receive an innocuous cut through blank space on the left.
+    val labelCutoffRatio = when (fieldType) {
+      FreeFieldType.CITY   -> 0.20f
+      FreeFieldType.SCHOOL -> 0.25f
     }
 
     val startX = (bW * labelCutoffRatio).toInt().coerceIn(0, bW - 1)
