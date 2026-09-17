@@ -20,7 +20,10 @@ data class RecognitionResult(
   val confidence: Float,
   val status: RecognitionStatus,
   val topCandidates: List<Pair<String, Float>> = emptyList(),
-  val rawInkCount: Int = 0
+  val rawInkCount: Int = 0,
+  val provider: String = "LOCAL",
+  val fallbackUsed: Boolean = false,
+  val reviewRequired: Boolean = false
 )
 
 /**

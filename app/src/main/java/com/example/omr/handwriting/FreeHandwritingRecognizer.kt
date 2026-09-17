@@ -15,19 +15,19 @@ import kotlin.coroutines.resume
  * Slices printed labels, removes horizontal ruling lines, isolates ink,
  * and passes normalized handwriting to ML Kit Text Recognition.
  */
-object FreeHandwritingRecognizer {
+object FreeHandwritingRecognizer : FreehandOcrProvider {
 
   private const val TAG = "FREE_HANDWRITING"
 
   /**
    * Recognizes freehand text from a raw field crop.
    */
-  suspend fun recognize(
-    rawCrop: Bitmap,
+  override suspend fun recognize(
+    crop: Bitmap,
     fieldType: FreeFieldType
   ): RecognitionResult {
     // 1. Preprocess: label strip, underline suppression, contrast normalization
-    val preproc = HandwritingPreprocessor.preprocessFreeHandwriting(rawCrop, fieldType)
+    val preproc = HandwritingPreprocessor.preprocessFreeHandwriting(crop, fieldType)
 
     if (!preproc.hasInk && preproc.inkPixelCount < 15) {
       return RecognitionResult(

@@ -482,7 +482,8 @@ object OmrScannerEngine {
   suspend fun processOmrImage(
     sourceBitmap: Bitmap,
     numQuestions: Int,
-    defaultStudentName: String = "Student"
+    defaultStudentName: String = "Student",
+    handwritingEngine: com.example.omr.handwriting.HandwritingRecognitionEngine = com.example.omr.handwriting.HybridHandwritingEngine.defaultInstance
   ): OmrScanOutput = withContext(Dispatchers.Default) {
     // 1. Perspective alignment and correction
     val alignment = detectCornerAlignment(sourceBitmap)
@@ -589,8 +590,8 @@ object OmrScannerEngine {
       bgDarkness = bgDarkness
     )
 
-    // 6. Extract Student Details from targeted OCR regions
-    val ocrInfo = extractStudentInfoFromOmr(workingBitmap)
+    // 6. Extract Student Details via independent HandwritingRecognitionEngine
+    val ocrInfo = extractStudentInfoFromOmr(workingBitmap, handwritingEngine)
 
     val finalFirstName = ocrInfo.firstName ?: ""
     val finalLastName = ocrInfo.lastName ?: ""
@@ -697,15 +698,59 @@ object OmrScannerEngine {
   }
 
   /**
-   * Recognizes student info from region-cropped areas using ML Kit Text Recognition (or new models in Test Mode).
+   * Extracts raw geometric crops for student text and handwriting regions.
    */
-  suspend fun extractStudentInfoFromOmr(bitmap: Bitmap): ExtractedStudentInfo {
+  fun extractFieldCrops(rectifiedSheet: Bitmap): com.example.omr.handwriting.OmrFieldCrops {
+    return com.example.omr.handwriting.OmrFieldCrops.fromRectifiedSheet(rectifiedSheet)
+  }
+
+  /**
+   * Recognizes student info from region-cropped areas using the independent HandwritingRecognitionEngine
+   * (or legacy full-sheet OCR when OLD_MODEL rollback mode is active).
+   */
+  suspend fun extractStudentInfoFromOmr(
+    bitmap: Bitmap,
+    handwritingEngine: com.example.omr.handwriting.HandwritingRecognitionEngine = com.example.omr.handwriting.HybridHandwritingEngine.defaultInstance
+  ): ExtractedStudentInfo {
     // Controlled Test Mode check: use new models only when explicitly enabled and initialized
     if (com.example.omr.handwriting.OmrHandwritingConfig.currentMode == com.example.omr.handwriting.HandwritingModelMode.NEW_BASELINE_MODEL &&
         com.example.omr.handwriting.OmrHandwritingEngine.isInitialized()) {
-      return extractStudentInfoWithNewModel(bitmap)
+      return extractStudentInfoWithNewModel(bitmap, handwritingEngine)
     }
 
+    return extractLegacyStudentInfo(bitmap)
+  }
+
+  /**
+   * Integration path delegating to the independent HandwritingRecognitionEngine via OmrFieldCrops.
+   */
+  private suspend fun extractStudentInfoWithNewModel(
+    bitmap: Bitmap,
+    handwritingEngine: com.example.omr.handwriting.HandwritingRecognitionEngine = com.example.omr.handwriting.HybridHandwritingEngine.defaultInstance
+  ): ExtractedStudentInfo {
+    val fieldCrops = extractFieldCrops(bitmap)
+    val hwResult = handwritingEngine.recognizeStudentInfo(fieldCrops)
+
+    val studentId = if (hwResult.phone.isNotBlank()) "NG${hwResult.phone}" else "NG-${(1000..9999).random()}"
+
+    return ExtractedStudentInfo(
+      firstName = hwResult.firstName.takeIf { it.isNotBlank() },
+      lastName = hwResult.lastName.takeIf { it.isNotBlank() },
+      studentName = hwResult.studentName.takeIf { it.isNotBlank() },
+      studentId = studentId,
+      phoneNumber = hwResult.phone.takeIf { it.isNotBlank() },
+      whatsappNumber = hwResult.whatsapp.takeIf { it.isNotBlank() } ?: hwResult.phone.takeIf { it.isNotBlank() },
+      block = hwResult.city.takeIf { it.isNotBlank() },
+      school = hwResult.school.takeIf { it.isNotBlank() },
+      courseCode = hwResult.courseCode.takeIf { it.isNotBlank() },
+      handwritingAudit = hwResult.runAudit
+    )
+  }
+
+  /**
+   * Legacy rollback path for OLD_MODEL mode.
+   */
+  private suspend fun extractLegacyStudentInfo(bitmap: Bitmap): ExtractedStudentInfo {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     return try {
       val courseCodeRaw = recognizeTextInCrop(bitmap, OmrLayoutDefinition.COURSE_CODE_REGION, recognizer)
@@ -788,38 +833,6 @@ object OmrScannerEngine {
     } finally {
       recognizer.close()
     }
-  }
-
-  /**
-   * Controlled integration path for new baseline letter & digit models on boxed fields.
-   */
-  private suspend fun extractStudentInfoWithNewModel(bitmap: Bitmap): ExtractedStudentInfo {
-    // 1. Process all handwriting fields via new HandwritingEngine pipeline
-    val hwResult = com.example.omr.handwriting.HandwritingEngine.processSheet(bitmap)
-
-    // 2. Extract printed Course Code (e.g. SOB, MCA)
-    val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    val courseCodeClean = try {
-      val cc = recognizeTextInCrop(bitmap, OmrLayoutDefinition.COURSE_CODE_REGION, recognizer)
-      cc.replace(Regex("""[^A-Za-z0-9]"""), "").trim().uppercase()
-    } finally {
-      recognizer.close()
-    }
-
-    val studentId = if (hwResult.phone.isNotBlank()) "NG${hwResult.phone}" else "NG-${(1000..9999).random()}"
-
-    return ExtractedStudentInfo(
-      firstName = hwResult.firstName.takeIf { it.isNotBlank() },
-      lastName = hwResult.lastName.takeIf { it.isNotBlank() },
-      studentName = hwResult.studentName.takeIf { it.isNotBlank() },
-      studentId = studentId,
-      phoneNumber = hwResult.phone.takeIf { it.isNotBlank() },
-      whatsappNumber = hwResult.whatsapp.takeIf { it.isNotBlank() } ?: hwResult.phone.takeIf { it.isNotBlank() },
-      block = hwResult.city.takeIf { it.isNotBlank() },
-      school = hwResult.school.takeIf { it.isNotBlank() },
-      courseCode = courseCodeClean.takeIf { it.isNotBlank() },
-      handwritingAudit = hwResult.runAudit
-    )
   }
 
   private fun getCropBitmap(bitmap: Bitmap, region: android.graphics.RectF): Bitmap {
