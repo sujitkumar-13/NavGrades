@@ -42,9 +42,9 @@ open class SupabaseOcrClient(
   private val anonKey: String = SupabaseConfig.SUPABASE_ANON_KEY,
   private val tokenProvider: () -> String? = { SupabaseConfig.client.auth.currentAccessTokenOrNull() },
   private val client: OkHttpClient = OkHttpClient.Builder()
-    .connectTimeout(5, TimeUnit.SECONDS)
-    .readTimeout(5, TimeUnit.SECONDS)
-    .writeTimeout(5, TimeUnit.SECONDS)
+    .connectTimeout(15, TimeUnit.SECONDS)
+    .readTimeout(15, TimeUnit.SECONDS)
+    .writeTimeout(15, TimeUnit.SECONDS)
     .build()
 ) {
 

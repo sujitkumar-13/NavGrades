@@ -40,7 +40,10 @@ data class ExtractedStudentInfo(
   val school: String? = null,
   val questionSetName: String? = null,
   val courseCode: String? = null,
-  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null
+  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null,
+  val provider: String = "GEMINI",
+  val fallbackUsed: Boolean = false,
+  val reviewRequired: Boolean = false
 )
 
 data class OmrScanOutput(
@@ -61,7 +64,10 @@ data class OmrScanOutput(
   val school: String = "",
   val questionSetName: String = "",
   val courseCode: String = "",
-  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null
+  val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null,
+  val provider: String = "GEMINI",
+  val fallbackUsed: Boolean = false,
+  val reviewRequired: Boolean = false
 )
 
 data class CornerPoint(val x: Float, val y: Float, val size: Float = 0.045f)
@@ -640,7 +646,10 @@ object OmrScannerEngine {
       school = finalSchool,
       questionSetName = detectedSet,
       courseCode = finalCourseCode,
-      handwritingAudit = ocrInfo.handwritingAudit
+      handwritingAudit = ocrInfo.handwritingAudit,
+      provider = ocrInfo.provider,
+      fallbackUsed = ocrInfo.fallbackUsed,
+      reviewRequired = ocrInfo.reviewRequired
     )
   }
 
@@ -748,7 +757,10 @@ object OmrScannerEngine {
       block = hwResult.city.takeIf { it.isNotBlank() },
       school = hwResult.school.takeIf { it.isNotBlank() },
       courseCode = hwResult.courseCode.takeIf { it.isNotBlank() },
-      handwritingAudit = hwResult.runAudit
+      handwritingAudit = hwResult.runAudit,
+      provider = hwResult.provider,
+      fallbackUsed = hwResult.fallbackUsed,
+      reviewRequired = hwResult.reviewRequired
     )
   }
 

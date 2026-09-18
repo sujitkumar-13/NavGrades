@@ -74,10 +74,10 @@ class HybridHandwritingEngine(
 
     val fallbackUsed = cityResult.fallbackUsed || schoolResult.fallbackUsed
     val reviewRequired = cityResult.reviewRequired || schoolResult.reviewRequired
-    val provider = if (cityResult.provider == "GEMINI" || schoolResult.provider == "GEMINI") {
-      "GEMINI"
-    } else if (fallbackUsed) {
+    val provider = if (fallbackUsed) {
       "ML_KIT_FALLBACK"
+    } else if (cityResult.provider == "GEMINI" || schoolResult.provider == "GEMINI") {
+      "GEMINI"
     } else {
       cityResult.provider
     }

@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     const transcribeCrop = async (imageBase64?: string): Promise<string> => {
       if (!imageBase64 || imageBase64.trim().length === 0) return "";
 
-      const prompt = "Transcribe ONLY the handwritten text in this image. Return the text exactly as visually read. Preserve visible punctuation/symbols. Output ONLY the raw transcribed text without explanations.";
+      const prompt = "Transcribe ONLY the handwritten text visible in this image crop. Return the text exactly as visually read. Do not semantically correct ambiguous characters. Do not convert '7' into '&' unless the symbol '&' is actually present. Preserve visible punctuation and symbols. Do not invent missing text. Do not include markdown, bullet points, quotes, or conversational explanations. Output ONLY the raw transcribed text.";
 
       const payload = {
         contents: [
@@ -197,8 +197,9 @@ Deno.serve(async (req: Request) => {
 
       const resJson = await response.json();
       let rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      // Clean markdown wrappers if any, preserve exact visual characters and symbols
-      rawText = rawText.trim().replace(/^```[a-zA-Z]*\n?|```$/g, "").trim().replace(/\n+/g, " ");
+      // Strip code fences, bullet markers, quotes, and extraneous newlines
+      rawText = rawText.trim().replace(/^```[a-zA-Z]*\n?|```$/g, "").trim();
+      rawText = rawText.replace(/^[•\-\*]\s*/, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
       return rawText;
     };
 
