@@ -13,6 +13,9 @@ import com.example.data.remote.SupabaseConfig
 import com.example.data.remote.model.ApprovedUserRemote
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.providers.Google
+import io.github.jan.supabase.gotrue.providers.builtin.IDToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,23 +76,28 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val credential = result.credential
         Log.d(tag, "Credential received of type: ${credential::class.java.name}, type=${credential.type}")
 
-        val email: String? = when {
-          credential is GoogleIdTokenCredential -> credential.id
+        val (email, idToken) = when {
+          credential is GoogleIdTokenCredential -> Pair(credential.id, credential.idToken)
           credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
             try {
               val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data)
-              googleIdToken.id
+              Pair(googleIdToken.id, googleIdToken.idToken)
             } catch (e: Exception) {
               Log.e(tag, "Failed to parse GoogleIdTokenCredential from data bundle", e)
-              null
+              Pair(null, null)
             }
           }
-          else -> null
+          else -> Pair(null, null)
         }
 
         if (email != null) {
-          val name = email.substringBefore("@")
-          processUserLogin(email, name)
+          if (idToken.isNullOrBlank()) {
+            Log.e(tag, "Google Sign-In returned email but missing ID token.")
+            _errorMessage.value = "Google authentication failed: ID token missing."
+          } else {
+            val name = email.substringBefore("@")
+            processUserLogin(email = email, name = name, idToken = idToken)
+          }
         } else {
           _errorMessage.value = "Unexpected credential type: ${credential.type}"
         }
@@ -107,21 +115,41 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
   /**
    * Whitelist-only login check.
-   * If the user's email exists in approved_users → Authenticated.
-   * Otherwise → NoAccess. No requests are submitted, no pending state exists.
+   * 1. If the user's email exists in approved_users → proceed to establish Supabase session.
+   * 2. Otherwise → NoAccess. No Supabase session is created.
+   * 3. For approved users, signs in with Supabase GoTrue using the Google ID token.
    */
-  fun processUserLogin(email: String, name: String) {
+  fun processUserLogin(email: String, name: String, idToken: String? = null) {
     viewModelScope.launch {
       _isLoading.value = true
       val cleanEmail = email.trim().lowercase()
 
       try {
         val approved = remoteRepo.checkApprovedUser(cleanEmail)
-        if (approved != null) {
-          _authState.value = AuthState.Authenticated(approved)
-        } else {
+        if (approved == null) {
           _authState.value = AuthState.NoAccess(cleanEmail)
+          return@launch
         }
+
+        // Whitelist check passed: Establish real Supabase Auth session if ID token is provided
+        if (!idToken.isNullOrBlank()) {
+          try {
+            SupabaseConfig.client.auth.signInWith(IDToken) {
+              this.idToken = idToken
+              provider = Google
+            }
+            Log.i(tag, "Supabase Auth session established successfully for user.")
+          } catch (authEx: Exception) {
+            Log.e(tag, "Failed to authenticate with Supabase using Google ID token: ${authEx.message}")
+            _errorMessage.value = "Failed to establish secure session: ${authEx.message}"
+            _authState.value = AuthState.Unauthenticated
+            return@launch
+          }
+        } else {
+          Log.w(tag, "No Google ID token provided; Supabase session not established.")
+        }
+
+        _authState.value = AuthState.Authenticated(approved)
       } catch (e: Exception) {
         Log.e(tag, "Error processing login for $cleanEmail: ${e.message}", e)
         _errorMessage.value = "Failed to verify access with database: ${e.message}"
@@ -132,8 +160,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun signOut() {
-    _authState.value = AuthState.Unauthenticated
-    _errorMessage.value = null
+    viewModelScope.launch {
+      try {
+        SupabaseConfig.client.auth.signOut()
+        Log.i(tag, "Supabase Auth session cleared.")
+      } catch (e: Exception) {
+        Log.w(tag, "Error signing out of Supabase: ${e.message}")
+      }
+      _authState.value = AuthState.Unauthenticated
+      _errorMessage.value = null
+    }
   }
 
   // -------------------------------------------------------------
