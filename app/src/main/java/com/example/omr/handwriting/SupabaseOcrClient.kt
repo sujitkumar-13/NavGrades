@@ -21,6 +21,10 @@ import java.util.concurrent.TimeUnit
 data class GeminiOcrResponse(
   val status: String,
   val provider: String = "GEMINI",
+  val firstName: String = "",
+  val lastName: String = "",
+  val phone: String = "",
+  val whatsapp: String = "",
   val city: String = "",
   val school: String = "",
   val fallbackUsed: Boolean = false,
@@ -35,7 +39,7 @@ data class GeminiOcrResponse(
  * SECURITY:
  * - Does not hold or log any Gemini API key (the key resides solely on the Supabase backend).
  * - Transmits caller's Supabase User JWT for endpoint authorization.
- * - Only sends City and School handwriting crops; never sends full OMR sheet.
+ * - Only sends handwriting crops; never sends full OMR sheet.
  */
 open class SupabaseOcrClient(
   private val endpointUrl: String = "${SupabaseConfig.SUPABASE_URL}/functions/v1/gemini-ocr",
@@ -54,17 +58,27 @@ open class SupabaseOcrClient(
   }
 
   /**
-   * Recognizes City and School handwriting fields by delegating to the Supabase Edge Function.
+   * Recognizes all six student handwriting fields by delegating to the Supabase Edge Function.
+   * Sends a single multimodal request with all provided crops.
    * Returns a structured GeminiOcrResponse. Never throws network exceptions to callers.
    */
-  open suspend fun recognizeFreehand(
+  open suspend fun recognizeAllFields(
+    firstNameCrop: Bitmap? = null,
+    lastNameCrop: Bitmap? = null,
+    phoneCrop: Bitmap? = null,
+    whatsappCrop: Bitmap? = null,
     cityCrop: Bitmap? = null,
     schoolCrop: Bitmap? = null
   ): GeminiOcrResponse = withContext(Dispatchers.IO) {
-    if (cityCrop == null && schoolCrop == null) {
+    if (firstNameCrop == null && lastNameCrop == null && phoneCrop == null &&
+        whatsappCrop == null && cityCrop == null && schoolCrop == null) {
       return@withContext GeminiOcrResponse(
         status = "SUCCESS",
         provider = "GEMINI",
+        firstName = "",
+        lastName = "",
+        phone = "",
+        whatsapp = "",
         city = "",
         school = "",
         fallbackUsed = false,
@@ -86,6 +100,18 @@ open class SupabaseOcrClient(
 
     try {
       val requestPayload = JSONObject().apply {
+        if (firstNameCrop != null) {
+          put("firstNameImageBase64", bitmapToBase64Png(firstNameCrop))
+        }
+        if (lastNameCrop != null) {
+          put("lastNameImageBase64", bitmapToBase64Png(lastNameCrop))
+        }
+        if (phoneCrop != null) {
+          put("phoneImageBase64", bitmapToBase64Png(phoneCrop))
+        }
+        if (whatsappCrop != null) {
+          put("whatsappImageBase64", bitmapToBase64Png(whatsappCrop))
+        }
         if (cityCrop != null) {
           put("cityImageBase64", bitmapToBase64Png(cityCrop))
         }
@@ -118,6 +144,10 @@ open class SupabaseOcrClient(
 
         val json = JSONObject(responseBody)
         val status = json.optString("status", "SUCCESS")
+        val firstName = json.optString("firstName", "")
+        val lastName = json.optString("lastName", "")
+        val phone = json.optString("phone", "")
+        val whatsapp = json.optString("whatsapp", "")
         val city = json.optString("city", "")
         val school = json.optString("school", "")
         val fallback = json.optBoolean("fallbackUsed", false)
@@ -126,6 +156,10 @@ open class SupabaseOcrClient(
         GeminiOcrResponse(
           status = status,
           provider = "GEMINI",
+          firstName = firstName,
+          lastName = lastName,
+          phone = phone,
+          whatsapp = whatsapp,
           city = city,
           school = school,
           fallbackUsed = fallback,
@@ -143,6 +177,14 @@ open class SupabaseOcrClient(
       )
     }
   }
+
+  /**
+   * Backward-compatible delegation for recognizing only City and School handwriting fields.
+   */
+  open suspend fun recognizeFreehand(
+    cityCrop: Bitmap? = null,
+    schoolCrop: Bitmap? = null
+  ): GeminiOcrResponse = recognizeAllFields(cityCrop = cityCrop, schoolCrop = schoolCrop)
 
   private fun bitmapToBase64Png(bitmap: Bitmap): String {
     val outputStream = ByteArrayOutputStream()

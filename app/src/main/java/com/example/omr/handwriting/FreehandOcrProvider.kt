@@ -210,4 +210,138 @@ class GeminiFreehandOcrProvider(
 
     return Pair(flaggedCity, flaggedSchool)
   }
+
+  /**
+   * Recognizes all six student information fields (First Name, Last Name, Phone, WhatsApp, City, School)
+   * in a single multimodal Gemini Vision request.
+   * Returns null if Gemini is unavailable, unauthenticated, or fails, triggering local fallback.
+   */
+  suspend fun recognizeAllStudentFields(
+    crops: OmrFieldCrops
+  ): GeminiStudentFieldsResult? {
+    try {
+      // 1. Prepare non-destructive crops for boxed fields (scaled to 60px height preserving aspect ratio)
+      val fnCrop = crops.firstNameCrop?.let { prepareBoxedCrop(it) }
+      val lnCrop = crops.lastNameCrop?.let { prepareBoxedCrop(it) }
+      val phoneCrop = crops.phoneCrop?.let { prepareBoxedCrop(it) }
+      val waCrop = crops.whatsappCrop?.let { prepareBoxedCrop(it) }
+
+      // 2. Preprocess freehand crops using existing calibrated label-strip and ink isolation logic
+      val cityPreproc = crops.cityCrop.let { HandwritingPreprocessor.preprocessFreeHandwriting(it, FreeFieldType.CITY) }
+      val schoolPreproc = crops.schoolCrop.let { HandwritingPreprocessor.preprocessFreeHandwriting(it, FreeFieldType.SCHOOL) }
+
+      val cityHasInk = cityPreproc.hasInk && cityPreproc.inkPixelCount >= 15
+      val schoolHasInk = schoolPreproc.hasInk && schoolPreproc.inkPixelCount >= 15
+
+      val targetCityBmp = if (cityHasInk) cityPreproc.cleanedBitmap else null
+      val targetSchoolBmp = if (schoolHasInk) schoolPreproc.cleanedBitmap else null
+
+      val response = ocrClient.recognizeAllFields(
+        firstNameCrop = fnCrop,
+        lastNameCrop = lnCrop,
+        phoneCrop = phoneCrop,
+        whatsappCrop = waCrop,
+        cityCrop = targetCityBmp,
+        schoolCrop = targetSchoolBmp
+      )
+
+      if (response.status == "SUCCESS" && !response.fallbackUsed) {
+        val cleanFn = HandwritingValidation.validateName(response.firstName)
+        val cleanLn = HandwritingValidation.validateName(response.lastName)
+        val cleanPhone = HandwritingValidation.validatePhone(response.phone)
+        val cleanWa = HandwritingValidation.validatePhone(response.whatsapp).ifBlank { cleanPhone }
+        val cleanCity = if (!cityHasInk) "" else response.city.trim()
+        val cleanSchool = if (!schoolHasInk) "" else response.school.trim()
+
+        return GeminiStudentFieldsResult(
+          firstName = RecognitionResult(
+            text = cleanFn,
+            confidence = if (cleanFn.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanFn.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          lastName = RecognitionResult(
+            text = cleanLn,
+            confidence = if (cleanLn.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanLn.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          phone = RecognitionResult(
+            text = cleanPhone,
+            confidence = if (cleanPhone.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanPhone.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          whatsapp = RecognitionResult(
+            text = cleanWa,
+            confidence = if (cleanWa.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanWa.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          city = RecognitionResult(
+            text = cleanCity,
+            confidence = if (cleanCity.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanCity.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            rawInkCount = cityPreproc.inkPixelCount,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          school = RecognitionResult(
+            text = cleanSchool,
+            confidence = if (cleanSchool.isNotBlank()) 0.95f else 1.0f,
+            status = if (cleanSchool.isNotBlank()) RecognitionStatus.HIGH_CONFIDENCE else RecognitionStatus.EMPTY,
+            rawInkCount = schoolPreproc.inkPixelCount,
+            provider = "GEMINI",
+            fallbackUsed = false,
+            reviewRequired = false
+          ),
+          fallbackUsed = false,
+          reviewRequired = false,
+          provider = "GEMINI"
+        )
+      }
+
+      Log.w(TAG, "Gemini OCR response indicates fallback: ${response.message}")
+      return null
+    } catch (t: Throwable) {
+      Log.e(TAG, "Exception in recognizeAllStudentFields: ${t.message}. Routing to fallback.", t)
+      return null
+    }
+  }
+
+  private fun prepareBoxedCrop(crop: Bitmap): Bitmap {
+    val h = crop.height
+    val w = crop.width
+    return if (h < 60) {
+      val scale = 60.0f / h.toFloat()
+      val targetW = (w * scale).toInt().coerceAtLeast(1)
+      Bitmap.createScaledBitmap(crop, targetW, 60, true)
+    } else {
+      crop
+    }
+  }
 }
+
+/**
+ * Result of recognizing all six student fields via Gemini Vision.
+ */
+data class GeminiStudentFieldsResult(
+  val firstName: RecognitionResult,
+  val lastName: RecognitionResult,
+  val phone: RecognitionResult,
+  val whatsapp: RecognitionResult,
+  val city: RecognitionResult,
+  val school: RecognitionResult,
+  val fallbackUsed: Boolean = false,
+  val reviewRequired: Boolean = false,
+  val provider: String = "GEMINI"
+)

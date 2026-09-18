@@ -22,11 +22,19 @@ const corsHeaders = {
 interface OcrRequest {
   cityImageBase64?: string;
   schoolImageBase64?: string;
+  firstNameImageBase64?: string;
+  lastNameImageBase64?: string;
+  phoneImageBase64?: string;
+  whatsappImageBase64?: string;
 }
 
 interface OcrResponse {
   status: "SUCCESS" | "ERROR";
   provider: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  whatsapp: string;
   city: string;
   school: string;
   fallbackUsed: boolean;
@@ -117,10 +125,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Model name configured in backend environment only
-    const geminiModel = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.6-flash";
+    // Model name configured in backend environment only (validated gemini-3.5-flash)
+    const geminiModel = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.5-flash";
 
-    // 4. Parse Request Body (Only City and School crops)
+    // 4. Parse Request Body
     let body: OcrRequest;
     try {
       body = await req.json();
@@ -129,6 +137,10 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           status: "ERROR",
           provider: "GEMINI",
+          firstName: "",
+          lastName: "",
+          phone: "",
+          whatsapp: "",
           city: "",
           school: "",
           fallbackUsed: false,
@@ -139,80 +151,138 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { cityImageBase64, schoolImageBase64 } = body;
+    const {
+      cityImageBase64,
+      schoolImageBase64,
+      firstNameImageBase64,
+      lastNameImageBase64,
+      phoneImageBase64,
+      whatsappImageBase64,
+    } = body;
 
-    if (!cityImageBase64 && !schoolImageBase64) {
+    const hasAnyImage = cityImageBase64 || schoolImageBase64 || firstNameImageBase64 ||
+                        lastNameImageBase64 || phoneImageBase64 || whatsappImageBase64;
+
+    if (!hasAnyImage) {
       return new Response(
         JSON.stringify({
           status: "ERROR",
           provider: "GEMINI",
+          firstName: "",
+          lastName: "",
+          phone: "",
+          whatsapp: "",
           city: "",
           school: "",
           fallbackUsed: false,
           reviewRequired: true,
-          message: "Bad Request: Neither cityImageBase64 nor schoolImageBase64 provided",
+          message: "Bad Request: No handwriting image crops provided",
         } as OcrResponse),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 5. Query Gemini API for each crop
-    const transcribeCrop = async (imageBase64?: string): Promise<string> => {
-      if (!imageBase64 || imageBase64.trim().length === 0) return "";
+    // 5. Query Gemini API with ONE multimodal request containing all provided image crops
+    const systemPrompt = `You are an expert handwriting OCR transcription engine for student exam sheets.
+Transcribe ONLY the handwritten text visible in each provided image crop according to these strict rules:
 
-      const prompt = "Transcribe ONLY the handwritten text visible in this image crop. Return the text exactly as visually read. Do not semantically correct ambiguous characters. Do not convert '7' into '&' unless the symbol '&' is actually present. Preserve visible punctuation and symbols. Do not invent missing text. Do not include markdown, bullet points, quotes, or conversational explanations. Output ONLY the raw transcribed text.";
+FIELD RULES:
+1. firstName and lastName:
+   - Read only what is visually written in the boxes.
+   - Output uppercase English letters A-Z where applicable.
+   - Do NOT invent or semantically correct names.
+   - Do NOT include spaces between letters of a single name. If empty, return "".
+2. phone and whatsapp:
+   - Read only what is visually written in the boxes.
+   - Output digits 0-9 only. Ignore printed box dividing borders or ruling lines.
+   - Preserve the exact visually written digits.
+   - Do NOT invent missing digits. If empty, return "".
+3. city and school:
+   - Preserve visually written words, spacing, commas, hyphens, and visible symbols (such as '&').
+   - Do NOT semantically "correct" uncertain handwriting. If empty, return "".
 
-      const payload = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: "image/png",
-                  data: imageBase64,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.0,
-          maxOutputTokens: 1024,
-        },
-      };
+OUTPUT FORMAT:
+Return ONLY a valid JSON object matching this schema:
+{
+  "firstName": "string",
+  "lastName": "string",
+  "phone": "string",
+  "whatsapp": "string",
+  "city": "string",
+  "school": "string"
+}`;
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
+    const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = [
+      { text: systemPrompt },
+    ];
 
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    if (firstNameImageBase64 && firstNameImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 1 - Field: 'firstName'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: firstNameImageBase64 } });
+    }
+    if (lastNameImageBase64 && lastNameImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 2 - Field: 'lastName'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: lastNameImageBase64 } });
+    }
+    if (phoneImageBase64 && phoneImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 3 - Field: 'phone'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: phoneImageBase64 } });
+    }
+    if (whatsappImageBase64 && whatsappImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 4 - Field: 'whatsapp'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: whatsappImageBase64 } });
+    }
+    if (cityImageBase64 && cityImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 5 - Field: 'city'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: cityImageBase64 } });
+    }
+    if (schoolImageBase64 && schoolImageBase64.trim().length > 0) {
+      parts.push({ text: "Crop 6 - Field: 'school'" });
+      parts.push({ inline_data: { mime_type: "image/png", data: schoolImageBase64 } });
+    }
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Gemini API HTTP ${response.status}: ${errText.slice(0, 200)}`);
-      }
-
-      const resJson = await response.json();
-      let rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      // Strip code fences, bullet markers, quotes, and extraneous newlines
-      rawText = rawText.trim().replace(/^```[a-zA-Z]*\n?|```$/g, "").trim();
-      rawText = rawText.replace(/^[•\-\*]\s*/, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-      return rawText;
+    const payload = {
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.0,
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json",
+      },
     };
 
-    const [cityText, schoolText] = await Promise.all([
-      transcribeCrop(cityImageBase64),
-      transcribeCrop(schoolImageBase64),
-    ]);
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
+
+    const response = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini API HTTP ${response.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const resJson = await response.json();
+    let rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    rawText = rawText.trim().replace(/^```(?:json)?\n?|```$/g, "").trim();
+
+    let parsed: Record<string, any> = {};
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (_pe) {
+      console.warn("Failed to parse Gemini JSON response:", rawText);
+    }
 
     const successResponse: OcrResponse = {
       status: "SUCCESS",
       provider: "GEMINI",
-      city: cityText,
-      school: schoolText,
+      firstName: typeof parsed.firstName === "string" ? parsed.firstName.trim() : "",
+      lastName: typeof parsed.lastName === "string" ? parsed.lastName.trim() : "",
+      phone: typeof parsed.phone === "string" ? parsed.phone.trim() : "",
+      whatsapp: typeof parsed.whatsapp === "string" ? parsed.whatsapp.trim() : "",
+      city: typeof parsed.city === "string" ? parsed.city.trim() : "",
+      school: typeof parsed.school === "string" ? parsed.school.trim() : "",
       fallbackUsed: false,
       reviewRequired: false,
     };
@@ -226,6 +296,10 @@ Deno.serve(async (req: Request) => {
     const errorResponse: OcrResponse = {
       status: "ERROR",
       provider: "GEMINI",
+      firstName: "",
+      lastName: "",
+      phone: "",
+      whatsapp: "",
       city: "",
       school: "",
       fallbackUsed: false,
