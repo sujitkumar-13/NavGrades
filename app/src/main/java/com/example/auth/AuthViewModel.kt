@@ -19,7 +19,7 @@ import io.github.jan.supabase.gotrue.providers.builtin.IDToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.launch 
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
   private val tag = "AuthViewModel"
