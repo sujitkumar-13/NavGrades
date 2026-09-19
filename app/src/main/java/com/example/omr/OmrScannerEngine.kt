@@ -41,7 +41,7 @@ data class ExtractedStudentInfo(
   val questionSetName: String? = null,
   val courseCode: String? = null,
   val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null,
-  val provider: String = "GEMINI",
+  val provider: String = "TFLITE_MLKIT",
   val fallbackUsed: Boolean = false,
   val reviewRequired: Boolean = false
 )
@@ -65,7 +65,7 @@ data class OmrScanOutput(
   val questionSetName: String = "",
   val courseCode: String = "",
   val handwritingAudit: com.example.omr.handwriting.HandwritingRunAudit? = null,
-  val provider: String = "GEMINI",
+  val provider: String = "TFLITE_MLKIT",
   val fallbackUsed: Boolean = false,
   val reviewRequired: Boolean = false
 )

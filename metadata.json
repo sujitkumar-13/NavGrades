@@ -2,5 +2,5 @@
   "name": "OMR Checker",
   "description": "Simple and fast offline OMR quiz and paper checking tool for seminars and exams with camera scanning, bubble reading, and paper review.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
