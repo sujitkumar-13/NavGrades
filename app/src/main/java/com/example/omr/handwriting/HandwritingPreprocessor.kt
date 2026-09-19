@@ -456,19 +456,17 @@ object HandwritingPreprocessor {
       return FreeHandwritingResult(stripBitmap, false, 0)
     }
 
-    // Strip the printed field label from the left of the crop.
-    // The CITY region (0.055–0.950 of 682px sheet = ~610px) always triggers,
-    // but the SCHOOL region (0.055–0.720 = ~454px) was previously blocked by
-    // the bW >= 500 guard, causing the printed "School / College" label to be
-    // fed verbatim to ML Kit.  The fix: apply the ratio based on field type
-    // regardless of absolute pixel width. Pre-cropped benchmark strips that
-    // contain no label receive an innocuous cut through blank space on the left.
-    val labelCutoffRatio = when (fieldType) {
-      FreeFieldType.CITY   -> 0.20f
-      FreeFieldType.SCHOOL -> 0.25f
+    // Determine startX:
+    // Case 1: Clean handwriting crop (width <= 460px, e.g. CITY_HANDWRITING_REGION or bench_*.png)
+    //         -> No printed label exists on the left; do not slice genuine handwriting!
+    // Case 2: Full-row crop containing printed label on left (width > 460px, e.g. baseline_*.png or full CITY_REGION)
+    //         -> Strip printed field label based on field type.
+    val startX = when {
+      bW <= 460 -> 0
+      fieldType == FreeFieldType.CITY -> (bW * 0.34f).toInt().coerceIn(0, bW - 1)
+      fieldType == FreeFieldType.SCHOOL -> (bW * 0.42f).toInt().coerceIn(0, bW - 1)
+      else -> (bW * 0.25f).toInt().coerceIn(0, bW - 1)
     }
-
-    val startX = (bW * labelCutoffRatio).toInt().coerceIn(0, bW - 1)
     val endX = bW - 1
 
     val subW = endX - startX + 1

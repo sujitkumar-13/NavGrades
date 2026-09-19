@@ -1,0 +1,28 @@
+{
+  "experiment_name": "Track A EMNIST 62-Class Base Pre-training",
+  "preprocessing_parity": "Canonical 20x20 bounding-box aspect-ratio scaling + COM=13.5 centering matching HandwritingPreprocessor.preprocessCell()",
+  "random_seed": 42,
+  "epochs": 1,
+  "batch_size": 512,
+  "initial_learning_rate": 0.001,
+  "lr_schedule": "CosineDecay(alpha=0.1)",
+  "optimizer": "Adam",
+  "samples_per_class_per_epoch": 2500,
+  "total_train_samples_per_epoch": 155000,
+  "raw_emnist_train_count": 697932,
+  "raw_emnist_test_count": 116323,
+  "classes_count": 62,
+  "model_architecture": "DepthwiseSeparableCNN_62class",
+  "total_parameters": 54846,
+  "input_tensor_shape": [
+    1,
+    28,
+    28,
+    1
+  ],
+  "output_tensor_shape": [
+    1,
+    62
+  ],
+  "timestamp": "2026-09-19 13:47:48"
+}

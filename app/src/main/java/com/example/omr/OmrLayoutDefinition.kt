@@ -82,6 +82,10 @@ object OmrLayoutDefinition {
   val CITY_REGION        = RectF(0.050f, 0.281f, 0.950f, 0.318f)
   val SCHOOL_REGION      = RectF(0.050f, 0.432f, 0.950f, 0.466f)
 
+  // Calibrated Physical Handwriting Regions on rectified 682x1024 sheet (excluding printed field labels on left)
+  val CITY_HANDWRITING_REGION   = RectF(0.278592f, 0.281f, 0.945748f, 0.318f)
+  val SCHOOL_HANDWRITING_REGION = RectF(0.278592f, 0.432f, 0.945748f, 0.466f)
+
   // Calibrated Physical Box Grid Regions on rectified 682x1024 sheet (excluding printed field labels on left)
   // Measured directly against physical new canonical form:
   // First Name: x in 175..645 (w=470, 23 boxes, ~20.43px/box), y in 143..168 (h=25)

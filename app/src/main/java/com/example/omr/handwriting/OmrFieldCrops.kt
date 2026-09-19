@@ -26,8 +26,8 @@ data class OmrFieldCrops(
     fun fromRectifiedSheet(sheet: Bitmap): OmrFieldCrops {
       return OmrFieldCrops(
         rectifiedSheet = sheet,
-        cityCrop = cropRegion(sheet, OmrLayoutDefinition.CITY_REGION),
-        schoolCrop = cropRegion(sheet, OmrLayoutDefinition.SCHOOL_REGION),
+        cityCrop = cropRegion(sheet, OmrLayoutDefinition.CITY_HANDWRITING_REGION),
+        schoolCrop = cropRegion(sheet, OmrLayoutDefinition.SCHOOL_HANDWRITING_REGION),
         courseCodeCrop = null,
         firstNameCrop = cropRegion(sheet, OmrLayoutDefinition.FIRST_NAME_BOXES_REGION),
         lastNameCrop = cropRegion(sheet, OmrLayoutDefinition.LAST_NAME_BOXES_REGION),
